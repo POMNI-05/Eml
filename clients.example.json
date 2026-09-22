@@ -1,0 +1,22 @@
+{
+  "client_id": "example_client",
+  "display_name": "Example Client",
+  "client_name": "Example Client",
+  "company_name": "Example Pty Ltd",
+  "primary_contacts": [],
+  "emails": [
+    "client@example.com"
+  ],
+  "domains": [
+    "example.com"
+  ],
+  "entities": [],
+  "aliases": [
+    "Example"
+  ],
+  "abbreviations": [],
+  "search_keywords": [
+    "invoice",
+    "fee"
+  ]
+}
