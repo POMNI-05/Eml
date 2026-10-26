@@ -13,3 +13,16 @@ emails_*.json
 threads_*.json
 
 *.scpt
+
+# Local client context and downloaded email evidence
+data/
+*.sqlite
+*.sqlite3
+*.sqlite3-*
+selected_messages*.json
+profile_export*.json
+client_secret*.json
+.eml-oauth-*
+ai_evidence_package*.json
+billing_draft*.json
+billing_work_record*.docx
