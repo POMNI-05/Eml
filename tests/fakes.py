@@ -1,5 +1,6 @@
 import base64
 import copy
+import re
 
 
 def raw_message(mid, *, labels=("L1",), thread="t1", body="Hello",
@@ -85,6 +86,16 @@ class Messages:
                 if any(h["name"].casefold() == "message-id" and h["value"].strip("<>") == term
                        for h in m["payload"].get("headers", []))
             ]
+        elif "-in:spam" in query:
+            # Simulate this workspace's quoted identity-term union, not Gmail generally.
+            terms = re.findall(r'"([^"]+)"', query)
+            def text_for(item):
+                headers = " ".join(h["value"] for h in item["payload"].get("headers", []))
+                data = item["payload"].get("body", {}).get("data", "")
+                body = base64.urlsafe_b64decode(data + "=" * (-len(data) % 4)).decode()
+                return (headers + " " + body).casefold()
+            items = [item for item in items
+                     if any(term.casefold() in text_for(item) for term in terms)]
         index = int(kwargs.get("pageToken", "0"))
         page = items[index:index + self.api.page_size]
         result = {"messages": [{"id": m["id"], "threadId": m["threadId"]} for m in page]}

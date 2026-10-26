@@ -1,0 +1,27 @@
+"""Validate scope and exact quotations before an AI draft is saved."""
+
+from eml_core.ai import ModelError
+import re
+
+
+def validate_activity_evidence(analysis, messages):
+    by_id = {message.message_id: message for message in messages}
+    for activity in analysis.activities:
+        for source in activity.evidence:
+            message = by_id.get(source.message_id)
+            if message is None:
+                raise ModelError("A generated activity cites an email outside the chosen evidence.")
+            if " ".join(source.quote.split()) not in " ".join(message.body.split()):
+                raise ModelError("A generated quotation is not present in its cited email. No draft was saved.")
+        if activity.status == "completed":
+            quotes = [source.quote.strip() for source in activity.evidence]
+            request_only = all(
+                re.match(r"^(please\b|could you\b|can you\b|would you\b|请|麻烦)", q, re.I)
+                and not re.search(r"\b(completed|lodged|submitted|finished)\b|已完成|已提交|已递交", q, re.I)
+                for q in quotes
+            )
+            if request_only:
+                activity.status = "unclear"
+                activity.uncertainties.append("The quoted evidence is a request; completion is not established.")
+    # This checks source fidelity, not whether an interpretation is substantively
+    # correct. Completion and billability still require the reviewer's judgment.

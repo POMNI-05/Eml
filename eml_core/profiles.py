@@ -24,6 +24,7 @@ from .mailbox import Email
 FIELDS = {
     "contacts", "entities", "aliases", "domains", "industry",
     "business_description", "engagement_scope", "history_notes", "potential_need",
+    "relationships",
 }
 SCALAR_FIELDS = {"industry", "business_description", "engagement_scope", "history_notes"}
 
@@ -53,6 +54,13 @@ def _value(field: str, value: Any) -> Any:
         ):
             raise ValueError("An entity needs a name.")
         return {"name": str(value["name"]).strip()}
+    if field == "relationships":
+        if not isinstance(value, dict) or not all(
+            isinstance(value.get(k), str) and value[k].strip()
+            for k in ("from_entity", "to_entity", "relationship")
+        ):
+            raise ValueError("A relationship needs two entities and a relationship description.")
+        return {k: value[k].strip() for k in ("from_entity", "to_entity", "relationship")}
     if not isinstance(value, str) or not value.strip():
         raise ValueError("A profile value must be non-empty text.")
     return value.strip().casefold() if field == "domains" else value.strip()
@@ -65,9 +73,13 @@ class Evidence:
     mailbox_id: str = ""
     message_id: str = ""
     date: str = ""
+    document_id: str = ""
+    location: str = ""
 
     def __post_init__(self):
-        if self.source_type not in {"email_header", "email_body", "manual", "import"}:
+        if self.source_type not in {
+            "email_header", "email_body", "manual", "import", "background_document",
+        }:
             raise ValueError("Unknown evidence type.")
         if not self.excerpt.strip():
             raise ValueError("Evidence must include an excerpt or manual note.")
@@ -75,6 +87,8 @@ class Evidence:
             self.mailbox_id and self.message_id
         ):
             raise ValueError("Email evidence needs mailbox and message IDs.")
+        if self.source_type == "background_document" and not (self.document_id and self.location):
+            raise ValueError("Document evidence needs document ID and location.")
 
 
 @dataclass(frozen=True)
@@ -337,6 +351,27 @@ class ProfileStore:
                 "UPDATE facts SET status=?, updated_at=? WHERE fact_id=?",
                 (decision, _now(), fact_id),
             )
+
+    def add_background_candidates(self, client_id: str, documents, candidates) -> int:
+        """Validate all sources before adding any candidate."""
+        self._require_client(client_id)
+        lookup = {}
+        for doc in documents:
+            if doc.client_id != client_id:
+                raise ValueError("Background document belongs to another client.")
+            lookup[doc.document_id] = {p.location: p.text for p in doc.parts}
+        candidates = list(candidates)
+        for candidate in candidates:
+            for source in candidate.evidence:
+                text = lookup.get(source.document_id, {}).get(source.location, "")
+                if (
+                    source.source_type != "background_document"
+                    or not source.excerpt.strip()
+                    or " ".join(source.excerpt.split()) not in " ".join(text.split())
+                ):
+                    raise ValueError("Background citation is outside the chosen documents.")
+        with self.connection:
+            return sum(self._write_candidate(client_id, c)[1] for c in candidates)
 
     def add_manual(self, client_id: str, field: str, value: Any,
                    *, note: str = "Entered by reviewer", replace_existing: bool = False) -> str:

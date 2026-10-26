@@ -17,6 +17,8 @@ from eml_core import GmailMailbox, ProfileStore, RuleExtractor, Selection, updat
 from eml_core.profiles import SCALAR_FIELDS
 from fetch_emails import get_gmail_service
 from outlook_adapter import get_selected_outlook_message_ids
+from eml_core.search import build_client_search, match_reasons
+from workspace_panels import connection_panel, model_panel, background_panel, generation_panel
 
 
 ROOT = Path(__file__).resolve().parent
@@ -38,6 +40,8 @@ st.caption("Choose email evidence, review suggested client details, and keep con
 
 with ProfileStore(DB_PATH) as store:
     with st.sidebar:
+        connection_panel(ROOT, get_gmail_service, clear_selection)
+        model_client, language = model_panel(ROOT)
         st.subheader("Client groups")
         with st.form("create_client"):
             new_name = st.text_input("New client group name")
@@ -73,16 +77,19 @@ with ProfileStore(DB_PATH) as store:
         st.info("Create or choose a client group to begin. Background details can be added later.")
         st.stop()
 
-    mail_tab, profile_tab = st.tabs(["Choose emails", "Client context"])
+    mail_tab, profile_tab, documents_tab, generation_tab = st.tabs(
+        ["Choose emails", "Client context", "Background documents", "Generate draft"]
+    )
     with mail_tab:
         mode = st.radio(
             "Email source",
-            ["Gmail labels", "Outlook selection (Mac)", "Internet Message-IDs"],
+            ["Gmail labels", "Client search", "Outlook selection (Mac)", "Internet Message-IDs"],
             horizontal=True,
         )
         label_ids = []
         internet_ids = []
         include_sub_labels = False
+        client_query = ""
         if mode == "Gmail labels":
             if st.button("Load Gmail labels"):
                 try:
@@ -105,6 +112,20 @@ with ProfileStore(DB_PATH) as store:
             if st.session_state.get("workspace_account"):
                 st.caption(f"Mailbox: {st.session_state['workspace_account']}")
             st.caption("Multiple labels are combined. Duplicate messages appear once.")
+        elif mode == "Client search":
+            extra = st.text_area(
+                "Additional client names or search terms", help="One name or phrase per line."
+            )
+            try:
+                plan = build_client_search(store.context(client_id), extra.splitlines())
+                client_query = plan.query
+                st.write("Search using confirmed client details:", list(plan.terms))
+                st.caption(
+                    "Confirmed company names, contact emails and aliases can come from uploaded "
+                    "background documents. Results remain yours to include or exclude."
+                )
+            except ValueError as exc:
+                st.info(str(exc))
         elif mode == "Internet Message-IDs":
             text = st.text_area("Paste one Internet Message-ID per line")
             internet_ids = [line.strip() for line in text.splitlines() if line.strip()]
@@ -126,7 +147,7 @@ with ProfileStore(DB_PATH) as store:
 
         signature = hashlib.sha256(json.dumps(
             [client_id, mode, st.session_state.get("workspace_account"),
-             label_ids, internet_ids, include_sub_labels, start, end, limit],
+             label_ids, internet_ids, client_query, include_sub_labels, start, end, limit],
             default=str,
         ).encode()).hexdigest()
         if st.session_state.get("workspace_scope") != signature:
@@ -141,6 +162,7 @@ with ProfileStore(DB_PATH) as store:
                 selection = Selection(
                     label_ids=tuple(label_ids) if mode == "Gmail labels" else (),
                     internet_message_ids=tuple(internet_ids) if mode != "Gmail labels" else (),
+                    client_query=client_query,
                     include_sub_labels=include_sub_labels,
                     start_date=start, end_date=end, max_messages=limit,
                 )
@@ -170,6 +192,14 @@ with ProfileStore(DB_PATH) as store:
                 key="workspace_selected_ids",
             )
             chosen = [by_id[mid] for mid in chosen_ids]
+            if chosen:
+                with st.expander("Matches with confirmed client background"):
+                    st.dataframe([
+                        {"Subject": m.subject, "Message ID": m.message_id,
+                         "Why it may relate": "; ".join(match_reasons(m, store.context(client_id)))
+                         or "No explicit profile match; review the email itself"}
+                        for m in chosen
+                    ], hide_index=True, width="stretch")
             if chosen:
                 with st.expander("Preview a message"):
                     mid = st.selectbox(
@@ -298,3 +328,8 @@ with ProfileStore(DB_PATH) as store:
             json.dumps(store.export_legacy(), ensure_ascii=False, indent=2),
             file_name="clients.json", mime="application/json",
         )
+
+    with documents_tab:
+        background_panel(store, client_id, model_client, language)
+    with generation_tab:
+        generation_panel(store, client_id, model_client, language)

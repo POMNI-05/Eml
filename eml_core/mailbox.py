@@ -157,6 +157,7 @@ class Selection:
     message_ids: tuple[str, ...] = ()
     internet_message_ids: tuple[str, ...] = ()
     thread_ids: tuple[str, ...] = ()
+    client_query: str = ""
     include_sub_labels: bool = False
     start_date: date | None = None
     end_date: date | None = None
@@ -166,7 +167,7 @@ class Selection:
     def __post_init__(self):
         if sum(bool(v) for v in (
             self.label_ids, self.message_ids, self.internet_message_ids,
-            self.thread_ids,
+            self.thread_ids, self.client_query.strip(),
         )) != 1:
             raise ValueError("Choose exactly one non-empty message source.")
         for values in (
@@ -311,6 +312,10 @@ class GmailMailbox:
             elif selection.internet_message_ids:
                 for mid in selection.internet_message_ids:
                     yield {"id": self._resolve_internet_id(mid)}
+            elif selection.client_query:
+                yield from self._message_refs(
+                    q=f"({selection.client_query}) {selection.query()}".strip()
+                )
             else:
                 for thread_id in dict.fromkeys(selection.thread_ids):
                     raw = self.service.users().threads().get(

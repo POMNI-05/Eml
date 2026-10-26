@@ -26,7 +26,8 @@ class WorkspaceTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         env = patch.dict(os.environ, {
-            "EML_PROFILE_DB": str(Path(self.temp.name) / "profiles.sqlite3")
+            "EML_PROFILE_DB": str(Path(self.temp.name) / "profiles.sqlite3"),
+            "EML_AUTH_DIR": str(Path(self.temp.name) / "auth"),
         })
         env.start()
         self.addCleanup(env.stop)
@@ -97,6 +98,75 @@ class WorkspaceTests(unittest.TestCase):
             with self.assertRaises(KeyError):
                 app.session_state["selected_threads"]
             self.assertFalse(app.exception)
+
+    def test_credential_upload_and_tutorial_are_available_before_client_creation(self):
+        app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
+        labels = [item.proto.label for item in app.get("file_uploader")]
+        self.assertIn("Drop Google credentials JSON here", labels)
+        self.assertTrue(any("获取 Gmail 凭证" in item.value for item in app.markdown))
+        self.get_service.assert_not_called()
+
+    def test_document_understanding_search_and_word_generation_use_one_client_context(self):
+        from eml_core import ProfileStore
+        from eml_core.documents import BackgroundStore
+        from tests.test_generation import FakeModel
+        model = FakeModel()
+        self.api.data["m1"] = raw_message(
+            "m1", body="I completed the bookkeeping review.",
+            sender="staff@firm.example", to="alex@client.example",
+        )
+        with patch("workspace_panels.OllamaClient", side_effect=lambda *a, **k: model):
+            app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
+            self.create(app, "Alex group")
+            cid = app.session_state["workspace_client"]
+            with ProfileStore(os.environ["EML_PROFILE_DB"]) as profiles:
+                BackgroundStore(profiles).save(
+                    cid, "background.txt",
+                    b"Alex represents Example Pty Ltd. Contact alex@client.example. Wholesale business.",
+                )
+            app.run()
+            element(app.button, "Load local models").click().run()
+            element(app.button, "Analyse documents with AI").click().run()
+            self.assertFalse(app.exception)
+            with ProfileStore(os.environ["EML_PROFILE_DB"]) as profiles:
+                fact_ids = [f["fact_id"] for f in profiles.list_facts(cid, "pending")]
+            self.assertEqual(len(fact_ids), 2)
+            for fid in fact_ids:
+                element(app.selectbox, "Suggestion").set_value(fid).run()
+                element(app.button, "Confirm suggestion").click().run()
+            element(app.radio, "Email source").set_value("Client search").run()
+            element(app.button, "Fetch chosen emails").click().run()
+            self.assertFalse(app.exception)
+            self.assertEqual(
+                [m.message_id for m in app.session_state["workspace_result"].messages], ["m1"]
+            )
+            element(app.button, "Generate work record draft").click().run()
+            self.assertFalse(app.exception)
+            draft = app.session_state[f"work_draft_{cid}"]
+            self.assertEqual(len(draft["inputs"]["client_profile"]["confirmed_facts"]), 2)
+            self.assertEqual(len(draft["inputs"]["background_documents"]), 1)
+            self.assertEqual(draft["inputs"]["selected_email_evidence"][0]["message_id"], "m1")
+            self.assertTrue(any(
+                d.proto.label == "Download Word record" for d in app.get("download_button")
+            ))
+            element(app.text_input, "Reviewer name").set_value("Test reviewer").run()
+            element(
+                app.checkbox, "I have checked the included activities against the email evidence"
+            ).set_value(True).run()
+            element(app.button, "Save edited draft").click().run()
+            self.assertFalse(app.exception)
+            revised = app.session_state[f"work_draft_{cid}"]
+            self.assertTrue(revised["reviewed"])
+            self.assertEqual(revised["reviewer"], "Test reviewer")
+            self.assertNotEqual(revised["draft_id"], draft["draft_id"])
+            self.assertTrue(element(
+                app.checkbox, "I have checked the included activities against the email evidence"
+            ).value)
+            element(app.multiselect, "Background documents sent to AI").set_value([]).run()
+            self.assertTrue(any("changed" in item.value for item in app.info))
+            self.assertFalse(any(
+                d.proto.label == "Download Word record" for d in app.get("download_button")
+            ))
 
 
 if __name__ == "__main__":
