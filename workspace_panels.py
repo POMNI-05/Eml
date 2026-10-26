@@ -218,10 +218,13 @@ def generation_panel(store, client_id, model_client, language):
                 previous = drafts.get(client_id, chosen_draft)
                 st.caption("This is the saved evidence snapshot, independent of the current selection.")
                 st.write(previous["analysis"]["client_summary"])
-                _draft_downloads(
-                    previous, previous.get("review_edits"),
-                    previous.get("reviewed", False), previous.get("reviewer", ""), "saved",
-                )
+                try:
+                    _draft_downloads(
+                        previous, previous.get("review_edits"),
+                        previous.get("reviewed", False), previous.get("reviewer", ""), "saved",
+                    )
+                except (ValueError, TypeError, KeyError) as exc:
+                    st.error("This saved draft contains invalid activity edits: " + str(exc))
 
     result = st.session_state.get("workspace_result")
     selected_ids = st.session_state.get("workspace_selected_ids", [])
@@ -303,11 +306,13 @@ def generation_panel(store, client_id, model_client, language):
         value=bool(draft.get("reviewed", False)),
         key=f"reviewed_{draft['draft_id']}",
     )
+    edits_valid = True
     try:
         _draft_downloads(draft, edited, reviewed, reviewer)
     except (ValueError, TypeError, KeyError) as exc:
+        edits_valid = False
         st.error("Check the edited activity fields before exporting: " + str(exc))
-    if st.button("Save edited draft"):
+    if st.button("Save edited draft", disabled=not edits_valid):
         import copy
         import uuid
         from eml_core.profiles import _now
@@ -316,6 +321,10 @@ def generation_panel(store, client_id, model_client, language):
             draft_id=str(uuid.uuid4()), parent_draft_id=draft["draft_id"], created_at=_now(),
             review_edits=edited, reviewed=reviewed, reviewer=reviewer,
         )
-        drafts.save(revised)
-        st.session_state[key] = revised
-        st.rerun()
+        try:
+            drafts.save(revised)
+        except (ValueError, TypeError, KeyError) as exc:
+            st.error("Check the edited activity fields before saving: " + str(exc))
+        else:
+            st.session_state[key] = revised
+            st.rerun()

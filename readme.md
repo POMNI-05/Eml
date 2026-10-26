@@ -1,36 +1,38 @@
-# Email-to-Invoice Workflow Automation
+# Eml · Email-to-Work-Draft Assistant
 
-A Python-based internal workflow for turning selected client email conversations into structured billing inputs for accountant review.
+A Python-based internal workspace for turning selected client correspondence into
+source-backed professional work drafts. Invoice preparation is the first use case:
+identify proposed work activities, review their evidence, and export an editable
+work record for preparing invoice descriptions.
 
-The project is designed around a real operational constraint: the company mailbox is hosted on **Google Workspace Gmail**, while the user works in **Legacy Outlook for Mac**. Outlook is therefore used as the email-selection interface, while Gmail remains the authoritative mailbox source.
+The mailbox is hosted on **Google Workspace Gmail**, which remains the
+authoritative email source. The primary workflow runs in the web workspace.
+**Legacy Outlook for Mac** selection is an optional alternative entry point.
 
 ## Current Workflow
 
 ~~~text
-Legacy Outlook
-    ↓
-AppleScript
-    ↓
-Python / FastAPI bridge
-    ↓
-Internet Message-ID
+Web workspace: client + optional dates + relevant email selection
     ↓
 Gmail API
     ↓
-Full Gmail thread
+Exact selected messages + reusable client background
     ↓
-Parse and normalise email content
+Structured evidence package
     ↓
-Client / thread matching
+Local AI work-record draft with source quotations and open questions
     ↓
-Streamlit review and selection
+Human review, corrections, and Word / JSON export
 ~~~
 
-## Client context workspace
+The Streamlit workspace calls shared Python services directly. The existing
+FastAPI bridge remains available for Outlook integration.
 
-The optional workspace adds reusable selection and client-profile modules.
-It shares the existing read-only Gmail OAuth login. Profiles are saved locally
-in an ignored SQLite database.
+## Run the workspace
+
+The workspace shares the existing read-only Gmail OAuth login. Client profiles,
+background documents and draft snapshots are saved locally in an ignored SQLite
+database.
 
 From the repository directory, with Python 3.11 or later:
 
@@ -45,13 +47,24 @@ Open Gmail setup to read the credential tutorial, drag in a Google Desktop app
 JSON file, and connect Gmail. Existing local credentials.json and token.json
 are also reused. See [Gmail setup](docs/gmail_setup.md).
 
-1. Create a client group, or import an existing clients.json.
-2. Load and choose Gmail labels; alternatively use Outlook-selected messages
-   or paste Internet Message-IDs.
-3. Fetch and preview the exact scope. Dates and nested labels are optional.
-4. Exclude irrelevant messages, then request suggested client details.
-5. Confirm or reject suggestions; manually enter missing business background.
-6. Export confirmed clients in the format understood by the original app.py.
+1. Create or choose a client group, or import an existing clients.json.
+2. Add or update client background when needed. Review suggested profile details
+   before confirming them; a complete profile is not required to select emails.
+3. Search using confirmed client identities or additional terms, or choose Gmail
+   labels. Optionally set dates, then fetch, preview and exclude irrelevant mail.
+4. In Generate draft, choose the relevant background documents. Download the AI
+   evidence package, or use a local Ollama model to generate a work-record draft.
+5. Check the quoted emails, correct descriptions and activity status, and exclude
+   unsupported items. Save a reviewed snapshot and export Word or JSON.
+
+The structured evidence package contains the client profile, selected documents,
+selected email content and source IDs, and selection scope. The AI proposes work
+activities and gaps from that evidence; a request for work does not establish
+completion. Hours and fees are entered separately. Other professional document
+types and email attachment analysis are future extensions.
+
+Outlook-selected messages and pasted Internet Message-IDs are also supported.
+Confirmed profiles can be exported for use with the original app.py.
 
 The local rule extractor provides simple suggestions without a model. The
 integrated Ollama connection can interpret client background documents and
@@ -67,7 +80,7 @@ background also accompanies draft generation. See [Local AI setup](docs/ollama_s
 | outlook_adapter.py | Original single-message adapter and added multi-message adapter |
 | outlook_trigger_multi.applescript | Read selected Internet Message-IDs in scriptable Mac Outlook |
 | helpers/inspect_outlook_dictionary.py | Inspect folder terms in the actual installed scripting dictionary |
-| client_workspace.py | Optional Streamlit workspace using the shared modules |
+| client_workspace.py | Primary Streamlit workspace using the shared modules |
 | workspace_panels.py | Credential upload, local AI, background documents and draft review panels |
 | eml_core/documents.py | Client-scoped source documents, text extraction and quoted locations |
 | eml_core/ai.py | Local Ollama structured output and background analysis |

@@ -8,7 +8,7 @@ import uuid
 from eml_core.ai import ModelError
 from eml_core.profiles import _now
 from .models import BillingAnalysis
-from .validator import validate_activity_evidence
+from .validator import validate_activity_evidence, validate_review_edits
 
 
 SYSTEM = """Prepare an accountant's reviewable client work record.
@@ -85,6 +85,7 @@ class DraftStore:
 
     def save(self, draft: dict):
         self.profiles._require_client(draft["client_id"])
+        validate_review_edits(draft["analysis"]["activities"], draft.get("review_edits"))
         with self.db:
             self.db.execute(
                 "INSERT INTO billing_drafts VALUES (?,?,?,?)",

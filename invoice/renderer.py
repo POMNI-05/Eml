@@ -3,6 +3,8 @@
 import io
 import re
 
+from .validator import validate_review_edits
+
 
 def _word_safe(value):
     """Preserve the saved source snapshot; remove invalid XML controls only in display."""
@@ -86,12 +88,11 @@ def render_docx(draft: dict, edits: list[dict] | None = None,
              "Description": a["description"], "Status": a["status"], "Reviewer note": ""}
             for i, a in enumerate(activities)
         ]
+    validate_review_edits(activities, edits)
     included = [row for row in edits if row.get("Include", True)]
     source_ids = []
     for row in included:
         index = int(row["Item"]) - 1
-        if index < 0 or index >= len(activities):
-            raise ValueError("Edited activity does not exist.")
         for evidence in activities[index]["evidence"]:
             if evidence["message_id"] not in source_ids:
                 source_ids.append(evidence["message_id"])
@@ -117,10 +118,6 @@ def render_docx(draft: dict, edits: list[dict] | None = None,
             activity = activities[int(row["Item"]) - 1]
             cells = table.add_row().cells
             description = str(row.get("Description") or "").strip()
-            if not description or row.get("Status") not in {
-                "completed", "in_progress", "requested", "unclear",
-            }:
-                raise ValueError("Included activities need a description and valid status.")
             if row.get("Reviewer note"):
                 description += "\nReviewer note: " + str(row["Reviewer note"])
             if activity["uncertainties"]:

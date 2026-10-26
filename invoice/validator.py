@@ -1,4 +1,4 @@
-"""Validate scope and exact quotations before an AI draft is saved."""
+"""Validate source quotations and reviewer edits before saving or exporting."""
 
 from eml_core.ai import ModelError
 import re
@@ -11,7 +11,8 @@ def validate_activity_evidence(analysis, messages):
             message = by_id.get(source.message_id)
             if message is None:
                 raise ModelError("A generated activity cites an email outside the chosen evidence.")
-            if " ".join(source.quote.split()) not in " ".join(message.body.split()):
+            quote = " ".join(source.quote.split())
+            if not quote or quote not in " ".join(message.body.split()):
                 raise ModelError("A generated quotation is not present in its cited email. No draft was saved.")
         if activity.status == "completed":
             quotes = [source.quote.strip() for source in activity.evidence]
@@ -25,3 +26,24 @@ def validate_activity_evidence(analysis, messages):
                 activity.uncertainties.append("The quoted evidence is a request; completion is not established.")
     # This checks source fidelity, not whether an interpretation is substantively
     # correct. Completion and billability still require the reviewer's judgment.
+
+
+def validate_review_edits(activities, edits):
+    """Excluded rows may stay unfinished; included rows must be exportable."""
+    if edits is None:
+        return
+    if not isinstance(edits, list) or any(not isinstance(row, dict) for row in edits):
+        raise ValueError("Activity edits must be a list of rows.")
+    for row in edits:
+        if not row.get("Include", True):
+            continue
+        try:
+            index = int(row["Item"]) - 1
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError("Edited activity does not exist.") from exc
+        if index < 0 or index >= len(activities):
+            raise ValueError("Edited activity does not exist.")
+        if not str(row.get("Description") or "").strip() or row.get("Status") not in {
+            "completed", "in_progress", "requested", "unclear",
+        }:
+            raise ValueError("Included activities need a description and valid status.")

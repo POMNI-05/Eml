@@ -16,10 +16,11 @@ class FakeModel:
     model = "test-local"
     context_size = 32768
 
-    def __init__(self, bad_quote=False, wrong_id=False):
+    def __init__(self, bad_quote=False, wrong_id=False, quote=None):
         self.payload = None
         self.bad_quote = bad_quote
         self.wrong_id = wrong_id
+        self.quote = quote
 
     def list_models(self):
         return [self.model]
@@ -48,7 +49,9 @@ class FakeModel:
                 "status": "completed",
                 "evidence": [{
                     "message_id": "outside" if self.wrong_id else message["message_id"],
-                    "quote": "Invented completed work" if self.bad_quote else message["body"],
+                    "quote": self.quote if self.quote is not None else (
+                        "Invented completed work" if self.bad_quote else message["body"]
+                    ),
                 }], "uncertainties": ["Check against prior billing records."],
             }],
             "open_questions": ["Confirm the time spent before billing."],
@@ -93,6 +96,40 @@ class GenerationTests(unittest.TestCase):
         for model in (FakeModel(bad_quote=True), FakeModel(wrong_id=True)):
             with self.subTest(model=model), self.assertRaises(ModelError):
                 self.generate(model)
+
+    def test_whitespace_only_email_evidence_is_rejected(self):
+        for quote in (" ", "\n\t  ", "\u2003"):
+            with self.subTest(quote=repr(quote)), self.assertRaises(ModelError):
+                self.generate(FakeModel(quote=quote))
+
+    def test_invalid_review_edits_cannot_be_saved_or_exported(self):
+        drafts = DraftStore(self.store)
+        draft = self.generate()
+        row = {
+            "Item": 1, "Include": True, "Entity": "Example Pty Ltd",
+            "Description": "Reviewed the records", "Status": "completed", "Reviewer note": "",
+        }
+        for change in (
+            {"Description": ""}, {"Description": "\n\t "}, {"Status": "invalid"},
+            {"Item": 0}, {"Item": 2},
+        ):
+            with self.subTest(change=change):
+                draft["review_edits"] = [{**row, **change}]
+                with self.assertRaises(ValueError):
+                    drafts.save(draft)
+                with self.assertRaises(ValueError):
+                    render_docx(draft, draft["review_edits"])
+                self.assertEqual(drafts.list(self.cid), [])
+
+    def test_excluding_an_incomplete_activity_still_allows_saving_and_export(self):
+        from docx import Document
+        draft = self.generate()
+        draft["review_edits"] = [{"Item": 1, "Include": False, "Description": "", "Status": ""}]
+        drafts = DraftStore(self.store)
+        drafts.save(draft)
+        saved = drafts.get(self.cid, draft["draft_id"])
+        document = Document(io.BytesIO(render_docx(saved, saved["review_edits"])))
+        self.assertIn("No work activities have been included.", "\n".join(p.text for p in document.paragraphs))
 
     def test_background_quotes_turn_into_reviewable_candidates(self):
         analysis = analyse_background(FakeModel(), self.store.context(self.cid), [self.document])

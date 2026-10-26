@@ -1,6 +1,8 @@
 """Optional UI integration tests; Gmail and Outlook are never contacted."""
 
 import importlib.util
+import copy
+import json
 import os
 import tempfile
 import unittest
@@ -49,6 +51,21 @@ class WorkspaceTests(unittest.TestCase):
         element(app.multiselect, "Labels").set_value(["L1"]).run()
         element(app.button, "Fetch chosen emails").click().run()
         self.assertFalse(app.exception)
+
+    def generate_test_draft(self):
+        from tests.test_generation import FakeModel
+        model = patch("workspace_panels.OllamaClient", side_effect=lambda *a, **k: FakeModel())
+        model.start()
+        self.addCleanup(model.stop)
+        self.api.data["m1"] = raw_message("m1", body="I completed the bookkeeping review.")
+        app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
+        self.create(app, "Alex group")
+        self.load_selection(app)
+        element(app.button, "Load local models").click().run()
+        element(app.button, "Generate work record draft").click().run()
+        self.assertFalse(app.exception)
+        cid = app.session_state["workspace_client"]
+        return app, cid, app.session_state[f"work_draft_{cid}"]
 
     def test_launch_does_not_read_mail_or_require_credentials(self):
         app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
@@ -105,6 +122,49 @@ class WorkspaceTests(unittest.TestCase):
         self.assertIn("Drop Google credentials JSON here", labels)
         self.assertTrue(any("获取 Gmail 凭证" in item.value for item in app.markdown))
         self.get_service.assert_not_called()
+
+    def test_invalid_activity_edits_disable_saving_until_corrected(self):
+        from eml_core import ProfileStore
+        from invoice.service import DraftStore
+        app, cid, draft = self.generate_test_draft()
+        edited = [{
+            "Item": 1, "Include": True, "Entity": "Example Pty Ltd",
+            "Description": "", "Status": "completed", "Reviewer note": "",
+        }]
+        with patch("workspace_panels.st.data_editor", return_value=edited):
+            app.run()
+            self.assertFalse(app.exception)
+            self.assertTrue(element(app.button, "Save edited draft").disabled)
+            self.assertTrue(any("Included activities need" in e.value for e in app.error))
+            with ProfileStore(os.environ["EML_PROFILE_DB"]) as profiles:
+                self.assertEqual(len(DraftStore(profiles).list(cid)), 1)
+        app.run()
+        self.assertFalse(element(app.button, "Save edited draft").disabled)
+        self.assertEqual(app.session_state[f"work_draft_{cid}"]["draft_id"], draft["draft_id"])
+
+    def test_opening_an_older_invalid_draft_keeps_the_workspace_usable(self):
+        from eml_core import ProfileStore
+        app, cid, draft = self.generate_test_draft()
+        invalid = copy.deepcopy(draft)
+        invalid["draft_id"] = "older-invalid-draft"
+        invalid["review_edits"] = [{
+            "Item": 1, "Include": True, "Description": "", "Status": "completed",
+        }]
+        # Simulate a draft saved before edit validation was added.
+        with ProfileStore(os.environ["EML_PROFILE_DB"]) as profiles:
+            with profiles.connection:
+                profiles.connection.execute(
+                    "INSERT INTO billing_drafts VALUES (?,?,?,?)",
+                    (invalid["draft_id"], cid, json.dumps(invalid), invalid["created_at"]),
+                )
+        app.run()
+        element(app.selectbox, "Saved draft").set_value(invalid["draft_id"]).run()
+        element(app.button, "Open saved draft").click().run()
+        self.assertFalse(app.exception)
+        self.assertTrue(any("saved draft contains invalid activity edits" in e.value for e in app.error))
+        self.assertTrue(any(
+            d.proto.label == "Download Word record" for d in app.get("download_button")
+        ))
 
     def test_document_understanding_search_and_word_generation_use_one_client_context(self):
         from eml_core import ProfileStore
