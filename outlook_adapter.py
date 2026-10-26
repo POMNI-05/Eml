@@ -39,7 +39,8 @@ def get_selected_outlook_email():
         )
     # stdout is the output of the AppleScript (return outputText)
     #   a string with fields separated by FIELD_SEPARATOR
-    output = result.stdout.strip()
+    # strip() also removes ASCII 31, losing an empty trailing folder field.
+    output = result.stdout.rstrip("\r\n")
 
     # after split, py gives a list 
     parts = output.split(FIELD_SEPARATOR)
@@ -68,3 +69,29 @@ def get_selected_outlook_email():
         "received_at": received_at,
         "folder_name": folder_name or None,
     }
+
+
+def get_selected_outlook_message_ids():
+    """Read multiple selections in Legacy Outlook on Mac.
+
+    Returns Internet Message-IDs, not Outlook or Gmail internal IDs. Resolve
+    them with GmailMailbox.select(Selection(internet_message_ids=...)).
+    Requires an on-device test against the installed Outlook dictionary.
+    """
+    script = Path(__file__).with_name("outlook_trigger_multi.applescript")
+    try:
+        result = subprocess.run(
+            ["osascript", str(script)], capture_output=True, text=True, timeout=60
+        )
+    except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
+        raise OutlookSelectionError(
+            "Could not read Outlook selection. Run on a Mac with scriptable Outlook."
+        ) from exc
+    if result.returncode:
+        raise OutlookSelectionError(
+            result.stderr.strip() or "Could not read selected Outlook messages."
+        )
+    ids = list(dict.fromkeys(line.strip() for line in result.stdout.splitlines() if line.strip()))
+    if not ids:
+        raise OutlookSelectionError("Please select at least one Outlook email.")
+    return ids

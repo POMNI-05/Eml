@@ -236,10 +236,23 @@ with middle:
 # -----------------------------
 # RIGHT PANEL: Email display
 # -----------------------------
+search_scope = (
+    selected_client.get("client_id") if selected_client else None,
+    client_name, company_name, keyword, str(start_date), str(end_date),
+    include_sent, has_attachment, int(max_threads),
+)
+if st.session_state.get("search_scope") != search_scope:
+    st.session_state.pop("threads", None)
+    st.session_state.pop("selected_threads", None)
+    st.session_state.pop("legacy_conversation_selection", None)
+    st.session_state["search_scope"] = search_scope
+
 with right:
     st.subheader("Email display")
 
     if fetch_button:
+        st.session_state.pop("selected_threads", None)
+        st.session_state.pop("legacy_conversation_selection", None)
         with st.spinner("Fetching Gmail conversations..."):
             threads = fetch_threads(
                 max_threads=int(max_threads),
@@ -276,6 +289,7 @@ with right:
                 f"{threads[i].get('subject', 'No subject')} "
                 f"({threads[i].get('message_count', 0)} messages)"
             ),
+            key="legacy_conversation_selection",
         )
 
         selected_threads = [

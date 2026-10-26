@@ -13,3 +13,11 @@ emails_*.json
 threads_*.json
 
 *.scpt
+
+# Local client context and downloaded email evidence
+data/
+*.sqlite
+*.sqlite3
+*.sqlite3-*
+selected_messages*.json
+profile_export*.json
