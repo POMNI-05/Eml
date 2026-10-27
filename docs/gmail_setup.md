@@ -25,7 +25,7 @@
 3. 点击 **Save and continue**。原下载文件名可以保留，程序会规范保存为 credentials.json。
 4. 点击 **Connect Gmail**，在本机打开的浏览器里选择实际需要读取的 Gmail 账户并授权。
 5. 返回 App，看到 Connected mailbox 后，右侧会显示 **Client** 和文件夹操作。
-   用 **New client → Add client** 添加客户，或直接选择已有客户。
+   用 **Client management → Add client** 添加客户，或直接选择已有客户。
 
 如果本机已有 credentials.json 或 token.json，首页直接显示登录按钮，不再显示上传区域。
 连接后，账户和本地 AI 设置收起在顶部 **Gmail connected** 状态按钮内。

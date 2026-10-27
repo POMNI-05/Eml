@@ -61,7 +61,7 @@ workspace starts with the client's Gmail folders, the current month and a
 when chosen. Folder choices are saved per client and mailbox using Gmail label
 IDs, so a renamed folder can still be recognised.
 
-1. Connect Gmail, then choose a **Client** or use **New client → Add client**.
+1. Connect Gmail, then choose a **Client** or use **Client management → Add client**.
    An existing clients.json can also be imported.
 2. In **Client & folders**, load folders, choose the client's paths and optional
    subfolders, and click **Open selected folders →** to load mail and advance.

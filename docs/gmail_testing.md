@@ -27,7 +27,7 @@ password. Keep this file on your computer; you do not need to paste it into chat
 
 1. Click **Connect Gmail**, choose your Gmail account in Google's browser page,
    and grant read-only access. Return here and check the connected email address.
-2. After connecting, click **New client**, enter **My Gmail test** and click
+2. After connecting, click **Client management**, enter **My Gmail test** and click
    **Add client**, or choose an existing **Client**.
 3. Label a few messages **Eml test** in Gmail. In **1. Client & folders**, click
    **Load folders** and select that folder. For the boss's account, choose the

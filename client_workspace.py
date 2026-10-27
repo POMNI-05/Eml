@@ -108,8 +108,25 @@ with ProfileStore(DB_PATH) as store:
         flash = st.session_state.pop("client_import_flash", "")
         if flash:
             st.success(flash)
+        search_store = ClientSearchMethodStore(store)
         client_col, new_col = st.columns([3, 1], gap="small", vertical_alignment="bottom")
-        with new_col, st.popover("New client", use_container_width=True):
+        with new_col, st.popover("Client management", use_container_width=True):
+            st.markdown("#### Clients")
+            st.caption("Saved search methods are kept per client and Gmail account.")
+            for managed_client in store.list_clients():
+                st.markdown(f"**{managed_client['display_name']}**")
+                mappings = search_store.for_client(managed_client["client_id"])
+                if not mappings:
+                    st.caption("No saved search methods yet.")
+                for mapping in mappings:
+                    for method in mapping["methods"]:
+                        terms = ", ".join(method["terms"])
+                        detail = f"{method['match_mode']} · {terms}"
+                        if method.get("excluded_terms"):
+                            detail += " · excludes " + ", ".join(method["excluded_terms"])
+                        st.caption(mapping["account_id"] + " · " + detail)
+            st.divider()
+            st.markdown("#### Add client")
             with st.form("create_client", border=False):
                 new_name = st.text_input("Client name", placeholder="e.g. Example Pty Ltd")
                 create = st.form_submit_button("Add client", use_container_width=True)
@@ -140,7 +157,6 @@ with ProfileStore(DB_PATH) as store:
 
         with st.container():
             folder_store = ClientFolderStore(store)
-            search_store = ClientSearchMethodStore(store)
             folder_tab, mail_tab, generation_tab = st.tabs(
                 [FOLDERS, EMAILS, DRAFT], key="workspace_step", on_change="rerun",
             )

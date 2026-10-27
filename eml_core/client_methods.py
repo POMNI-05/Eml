@@ -11,6 +11,14 @@ class ClientSearchMethodStore:
         self.profiles._require_client(client_id)
         row = self.db.execute("SELECT methods_json FROM client_search_methods WHERE client_id=? AND account_id=?", (client_id, (account_id or '').strip().casefold())).fetchone()
         return json.loads(row[0]) if row else []
+
+    def for_client(self, client_id):
+        self.profiles._require_client(client_id)
+        rows = self.db.execute(
+            "SELECT account_id, methods_json FROM client_search_methods WHERE client_id=? ORDER BY account_id",
+            (client_id,),
+        )
+        return [{"account_id": row[0], "methods": json.loads(row[1])} for row in rows]
     def save(self, client_id, account_id, method):
         self.profiles._require_client(client_id)
         if not isinstance(account_id, str) or not account_id.strip() or not method.get('terms'):
