@@ -49,7 +49,8 @@ of those written** (either entry may match) or **Match ALL of those written** (e
 An email address matches the From, To or Cc fields.
 
 **Exclusion filters** offers **Leave out**, **Subject begins with** and **Hide subjects
-beginning with**. Each entry is literal text; you do not need to type AND, OR or
+beginning with**, plus **Leave out from** to choose Anywhere, Sender fields,
+To/Cc fields, Subject only or Body only. Each entry is literal text; you do not need to type AND, OR or
 minus signs. Subject prefixes ignore case and leading spaces, but include reply
 prefixes such as `Re:`. Prefixes are checked on individual messages before the
 message limit is counted. **Reset search** restores the client's saved entries

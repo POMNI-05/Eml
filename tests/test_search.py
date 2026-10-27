@@ -43,6 +43,17 @@ class SearchTests(unittest.TestCase):
         clean = raw_message("clean", body="BAS")
         self.assertEqual(self.select(["BAS"], [blocked, clean], excluded_terms=["newsletter@example.com"]), {"clean"})
 
+    def test_exclusion_area_controls_email_headers_and_text_fields(self):
+        plan = build_client_search({}, ["BAS"], excluded_terms=["newsletter@example.com"], exclusion_area="sender")
+        self.assertIn('-from:"newsletter@example.com"', plan.query)
+        self.assertNotIn('-to:"newsletter@example.com"', plan.query)
+        plan = build_client_search({}, ["BAS"], excluded_terms=["newsletter"], exclusion_area="subject")
+        self.assertIn('-subject:"newsletter"', plan.query)
+        plan = build_client_search({}, ["BAS"], excluded_terms=["newsletter"], exclusion_area="body")
+        self.assertIn('-body:"newsletter"', plan.query)
+        with self.assertRaises(ValueError):
+            build_client_search({}, ["BAS"], exclusion_area="unknown")
+
     def test_removed_saved_identities_are_not_silently_added_back(self):
         context = {"confirmed_facts": [
             {"field": "aliases", "value": "Shared alias", "fact_id": "alias"},

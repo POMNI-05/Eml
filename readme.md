@@ -76,7 +76,8 @@ Client details and documents are available from the **Client background** card. 
 search, Outlook selection and Internet Message-IDs remain alternative sources.
 Client search accepts separate names, email addresses or phrases, with **Match ANY
 of those written** or **Match ALL of those written** matching. **Exclusion filters** adds exclusions and subject
-prefixes without requiring Gmail query syntax. Saved search entries can be removed;
+prefixes without requiring Gmail query syntax. **Leave out from** lets you choose
+Anywhere, Sender fields, To/Cc fields, Subject only or Body only. Saved search entries can be removed;
 they are not silently added back. Subject prefixes are checked locally before
 counting the message limit.
 Saved searches are stored in the local user profile per client and Gmail account.

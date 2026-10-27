@@ -16,6 +16,7 @@ class ClientSearch:
     source_fact_ids: tuple[str, ...]
     match_mode: str = "any"
     excluded_terms: tuple[str, ...] = ()
+    exclusion_area: str = "anywhere"
 
 
 def _quoted(value: str) -> str:
@@ -50,7 +51,7 @@ def _is_email(value):
 
 
 def build_client_search(context: dict, additional_terms=(), *, match_mode="any",
-                        excluded_terms=(), include_profile=True) -> ClientSearch:
+                        excluded_terms=(), exclusion_area="anywhere", include_profile=True) -> ClientSearch:
     """Compile literal entries; exclusions always apply outside the any/all group.
 
     The UI passes include_profile=False because saved identities are already
@@ -58,6 +59,8 @@ def build_client_search(context: dict, additional_terms=(), *, match_mode="any",
     """
     if match_mode not in {"any", "all"}:
         raise ValueError("Choose any or all search entries.")
+    if exclusion_area not in {"anywhere", "sender", "recipient", "subject", "body"}:
+        raise ValueError("Choose a valid exclusion area.")
     identities, source_lookup = {}, {}
     for fact in context.get("confirmed_facts", []):
         field, value = fact["field"], fact["value"]
@@ -95,13 +98,17 @@ def build_client_search(context: dict, additional_terms=(), *, match_mode="any",
     negative = []
     for term in exclusions:
         if _is_email(term):
-            negative.extend(f"-{field}:{_quoted(term)}" for field in ("from", "to", "cc"))
+            fields = {"sender": ("from",), "recipient": ("to", "cc")}.get(
+                exclusion_area, ("from", "to", "cc")
+            )
+            negative.extend(f"-{field}:{_quoted(term)}" for field in fields)
         else:
-            negative.append("-" + _quoted(term))
+            field = {"subject": "subject", "body": "body"}.get(exclusion_area, "")
+            negative.append("-" + (field + ":" if field else "") + _quoted(term))
     return ClientSearch(
         query=" ".join([positive, *negative, "-in:spam", "-in:trash"]),
         terms=tuple(terms), source_fact_ids=tuple(dict.fromkeys(source_ids)),
-        match_mode=match_mode, excluded_terms=tuple(exclusions),
+        match_mode=match_mode, excluded_terms=tuple(exclusions), exclusion_area=exclusion_area,
     )
 
 

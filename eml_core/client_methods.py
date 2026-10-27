@@ -23,7 +23,7 @@ class ClientSearchMethodStore:
         self.profiles._require_client(client_id)
         if not isinstance(account_id, str) or not account_id.strip() or not method.get('terms'):
             raise ValueError("A connected mailbox and at least one search entry are required.")
-        fields = ("terms", "match_mode", "excluded_terms", "subject_prefix", "excluded_subject_prefix")
+        fields = ("terms", "match_mode", "excluded_terms", "exclusion_area", "subject_prefix", "excluded_subject_prefix")
         value = {field: method.get(field, [] if field.endswith('terms') else '') for field in fields}
         methods = [old for old in self.get(client_id, account_id) if old != value]
         methods.insert(0, value)

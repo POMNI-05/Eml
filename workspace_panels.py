@@ -171,7 +171,7 @@ def client_background_panel(store, client_id):
 
 def _reset_client_search(state_key, widget_prefix, defaults):
     st.session_state[state_key] = {"terms": list(defaults)}
-    for field in ("find", "match", "exclude", "prefix", "hide_prefix"):
+    for field in ("find", "match", "exclude", "exclude_area", "prefix", "hide_prefix"):
         st.session_state.pop(widget_prefix + field, None)
 
 
@@ -205,6 +205,15 @@ def client_search_panel(context, search_store=None, account_id=""):
             accept_new_options=True, placeholder="e.g. newsletter, meeting invitation",
             key=widget_prefix + "exclude",
         )
+        exclusion_area = st.selectbox(
+            "Leave out from", ["anywhere", "sender", "recipient", "subject", "body"],
+            format_func=lambda value: {
+                "anywhere": "Anywhere in the email", "sender": "Sender fields",
+                "recipient": "To / Cc fields", "subject": "Subject only", "body": "Body only",
+            }[value], index=["anywhere", "sender", "recipient", "subject", "body"].index(
+                state.get("exclusion_area", "anywhere")
+            ), key=widget_prefix + "exclude_area",
+        )
         prefix = st.text_input(
             "Subject begins with", value=state.get("prefix", ""), placeholder="e.g. Tax advice",
             help="Matches the actual beginning of the subject, including Re: or Fwd:.",
@@ -224,17 +233,18 @@ def client_search_panel(context, search_store=None, account_id=""):
             search_store.save(context["client_id"], account_id, {
                 "terms": list(terms), "match_mode": "all" if match == choices[1] else "any",
                 "excluded_terms": list(excluded), "subject_prefix": prefix.strip(),
-                "excluded_subject_prefix": hide_prefix.strip(),
+                "excluded_subject_prefix": hide_prefix.strip(), "exclusion_area": exclusion_area,
             })
             st.success("Search method saved for this client.")
     st.session_state[state_key] = {
         "terms": terms, "match": match, "match_mode": "all" if match == choices[1] else "any", "excluded": excluded,
-        "prefix": prefix, "hide_prefix": hide_prefix,
+        "prefix": prefix, "hide_prefix": hide_prefix, "exclusion_area": exclusion_area,
     }
     try:
         plan = build_client_search(
             context, terms, include_profile=False,
             match_mode="all" if match == choices[1] else "any", excluded_terms=excluded,
+            exclusion_area=exclusion_area,
         )
     except ValueError as exc:
         st.caption("Add a name, email address or phrase to start." if not terms else str(exc))
@@ -244,7 +254,7 @@ def client_search_panel(context, search_store=None, account_id=""):
         if len(plan.terms) > 1 else "Find emails matching this entry."
     )
     if plan.excluded_terms:
-        summary += " Leave out: " + "; ".join(plan.excluded_terms) + "."
+        summary += f" Leave out from {plan.exclusion_area}: " + "; ".join(plan.excluded_terms) + "."
     if prefix.strip():
         summary += f" Subject begins with: {prefix.strip()}."
     if hide_prefix.strip():
