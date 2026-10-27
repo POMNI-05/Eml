@@ -16,9 +16,10 @@ from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from email.utils import getaddresses, parseaddr
 from pathlib import Path
-from typing import Any, Iterable, Protocol
+from typing import TYPE_CHECKING, Any, Iterable, Protocol
 
-from .mailbox import Email
+if TYPE_CHECKING:
+    from .mailbox import Email
 
 
 FIELDS = {
@@ -217,7 +218,7 @@ class ProfileStore:
 
     def create_client(self, display_name: str, client_id: str | None = None) -> str:
         if not display_name.strip():
-            raise ValueError("Client group name is required.")
+            raise ValueError("Client name is required.")
         client_id = client_id or str(uuid.uuid4())
         if not client_id.strip():
             raise ValueError("Client ID is required.")

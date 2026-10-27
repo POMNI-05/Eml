@@ -20,7 +20,14 @@ alone never prove that work was performed in this period. Group repeated
 correspondence about one activity. Distinguish requests, work in progress,
 explicit completion statements and unclear status; never convert a client
 request into completed work. Each activity must quote its selected source
-email exactly and identify its message_id. Do not infer hours, rates, fees,
+email body or extracted attachment part exactly and identify its message_id.
+For attachment quotes, also supply attachment_part_id and the exact part
+location (page, block, sheet/row or text). For email-body quotes leave those
+two fields empty. Attachments are part of their parent email's evidence, not
+independent proof that the sender performed the described work. Honour all
+attachment warnings: unread files and pages were not supplied; formulas have
+not been calculated. Surface relevant missing content in open_questions.
+Do not infer hours, rates, fees,
 legal obligations, document contents not supplied, or completed tasks from
 attachment names. Use uncertainties and open_questions for missing context.
 Return an empty activity list if no work activity is supported.
@@ -46,6 +53,12 @@ def build_inputs(context, documents, result, selected_ids, language="English"):
             "loaded_count": len(result.messages), "chosen_count": len(messages),
             "excluded_message_ids": [mid for mid in by_id if mid not in selected_ids],
             "fetch_complete": result.complete, "warnings": result.warnings,
+            "attachment_warnings": [
+                {"message_id": message.message_id, "part_id": attachment.part_id,
+                 "filename": attachment.filename, "warnings": list(attachment.warnings)}
+                for message in messages for attachment in message.attachment_contents
+                if attachment.warnings
+            ],
         },
     }
     return payload, messages

@@ -169,12 +169,27 @@ def render_docx(draft: dict, edits: list[dict] | None = None,
         doc.add_heading(refs[mid], 2)
         doc.add_paragraph(f"Subject: {message['subject']}\nFrom: {message['sender']}\nDate: {message['date']}")
         doc.add_paragraph(f"Gmail message ID: {mid}")
-        quotes = list(dict.fromkeys(
-            e["quote"] for row in included
+        citations = [
+            e for row in included
             for e in activities[int(row["Item"]) - 1]["evidence"] if e["message_id"] == mid
-        ))
-        for quote in quotes:
-            doc.add_paragraph(quote)
+        ]
+        seen = set()
+        for citation in citations:
+            key = (citation.get("attachment_part_id", ""), citation.get("location", ""), citation["quote"])
+            if key in seen:
+                continue
+            seen.add(key)
+            if citation.get("attachment_part_id"):
+                attachment = next(a for a in message.get("attachment_contents", [])
+                                  if a["part_id"] == citation["attachment_part_id"])
+                doc.add_paragraph(
+                    f"Attachment: {attachment['filename']} · {citation['location']} "
+                    f"(part {attachment['part_id']})"
+                )
+            doc.add_paragraph(citation["quote"])
+        for attachment in message.get("attachment_contents", []):
+            for warning in attachment.get("warnings", []):
+                doc.add_paragraph(f"Attachment {attachment['filename']}: {warning}")
     output = io.BytesIO()
     doc.save(output)
     return output.getvalue()

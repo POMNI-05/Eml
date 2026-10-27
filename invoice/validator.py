@@ -12,7 +12,17 @@ def validate_activity_evidence(analysis, messages):
             if message is None:
                 raise ModelError("A generated activity cites an email outside the chosen evidence.")
             quote = " ".join(source.quote.split())
-            if not quote or quote not in " ".join(message.body.split()):
+            text = message.body
+            if source.attachment_part_id:
+                attachment = next((a for a in message.attachment_contents
+                                   if a.part_id == source.attachment_part_id), None)
+                part = next((p for p in attachment.parts if p.location == source.location), None) if attachment else None
+                if part is None:
+                    raise ModelError("A generated activity cites an attachment or location outside the chosen evidence.")
+                text = part.text
+            elif source.location:
+                raise ModelError("An attachment location needs its source attachment part ID.")
+            if not quote or quote not in " ".join(text.split()):
                 raise ModelError("A generated quotation is not present in its cited email. No draft was saved.")
         if activity.status == "completed":
             quotes = [source.quote.strip() for source in activity.evidence]

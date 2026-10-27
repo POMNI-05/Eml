@@ -10,13 +10,19 @@ import base64
 import hashlib
 import json
 import re
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass, field, replace
 from datetime import date, datetime, time, timedelta, timezone
 from email.message import Message
 from email.utils import parsedate_to_datetime
 from html.parser import HTMLParser
+from pathlib import Path
 from typing import Any
 from zoneinfo import ZoneInfo
+
+from .attachments import EmailAttachment, SUPPORTED_SUFFIXES, extract_attachment
+from .documents import MAX_BYTES
+
+MAX_FETCH_ATTACHMENT_BYTES = 50 * 1024 * 1024
 
 
 def header(payload: dict, name: str) -> str:
@@ -112,6 +118,7 @@ class Email:
     internet_message_id: str = ""
     label_ids: tuple[str, ...] = ()
     attachments: tuple[str, ...] = ()
+    attachment_contents: tuple[EmailAttachment, ...] = ()
 
     @classmethod
     def from_gmail(cls, raw: dict) -> "Email":
@@ -163,6 +170,8 @@ class Selection:
     end_date: date | None = None
     timezone_name: str = "Australia/Sydney"
     max_messages: int | None = None
+    subject_prefix: str = ""
+    excluded_subject_prefix: str = ""
 
     def __post_init__(self):
         if sum(bool(v) for v in (
@@ -183,6 +192,8 @@ class Selection:
             raise ValueError("max_messages must be positive or None.")
         if self.include_sub_labels and not self.label_ids:
             raise ValueError("Sub-labels apply only to label selections.")
+        if not isinstance(self.subject_prefix, str) or not isinstance(self.excluded_subject_prefix, str):
+            raise ValueError("Subject prefixes must be text.")
 
     def bounds(self) -> tuple[int | None, int | None]:
         tz = ZoneInfo(self.timezone_name)
@@ -205,7 +216,17 @@ class Selection:
             terms.append(f"before:{upper // 1000}")
         return " ".join(terms)
 
+    def matches_subject(self, message: Email) -> bool:
+        subject = message.subject.lstrip().casefold()
+        return (
+            (not self.subject_prefix.strip() or subject.startswith(self.subject_prefix.strip().casefold()))
+            and (not self.excluded_subject_prefix.strip()
+                 or not subject.startswith(self.excluded_subject_prefix.strip().casefold()))
+        )
+
     def contains(self, message: Email) -> bool:
+        if not self.matches_subject(message):
+            return False
         lower, upper = self.bounds()
         if lower is None and upper is None:
             return True
@@ -296,6 +317,53 @@ class GmailMailbox:
             raise ValueError(f"Internet Message-ID not found in this Gmail account: {value}")
         return refs[0]
 
+    def _read_attachments(self, raw, budget):
+        def files(part, location="0"):
+            if part.get("filename"):
+                yield part, location
+            else:
+                for index, child in enumerate(part.get("parts", [])):
+                    yield from files(child, f"{location}.{index}")
+
+        output = []
+        for part, location in files(raw.get("payload", {})):
+            filename = part["filename"]
+            body = part.get("body", {})
+            size = int(body.get("size", 0))
+            source = EmailAttachment(
+                part_id=part.get("partId") or location, filename=filename,
+                mime_type=part.get("mimeType", ""), size=size,
+            )
+            try:
+                if Path(filename).suffix.casefold() not in SUPPORTED_SUFFIXES:
+                    raise ValueError("Not read: unsupported file type. Images and scanned files need OCR text.")
+                if size > MAX_BYTES:
+                    raise ValueError("Not read: attachment exceeds the 20 MB limit.")
+                if size > budget[0] or budget[0] <= 0:
+                    raise ValueError("Not read: attachments exceed the 50 MB limit for this fetch.")
+                content_body = body
+                if body.get("attachmentId"):
+                    content_body = self.service.users().messages().attachments().get(
+                        userId=self.user_id, messageId=raw["id"], id=body["attachmentId"],
+                    ).execute()
+                data = content_body.get("data", "")
+                content = base64.urlsafe_b64decode(data + "=" * (-len(data) % 4))
+                budget[0] -= len(content)
+                if len(content) > MAX_BYTES or budget[0] < 0:
+                    raise ValueError("Not read: attachment exceeds the file or fetch size limit.")
+                parts, warnings = extract_attachment(filename, content)
+                source = replace(
+                    source, size=len(content), sha256=hashlib.sha256(content).hexdigest(),
+                    parts=tuple(parts), warnings=tuple(warnings),
+                )
+            except Exception as exc:
+                # One unavailable or unreadable file must not discard the email.
+                # Avoid including service errors, URLs or credentials in evidence.
+                reason = str(exc) if isinstance(exc, ValueError) else "Not read: attachment download or extraction failed."
+                source = replace(source, warnings=(reason,))
+            output.append(source)
+        return tuple(output)
+
     def select(self, selection: Selection) -> SelectionResult:
         """Read only selected messages. API failures propagate; never report success."""
         raw_threads: dict[str, dict] = {}
@@ -328,6 +396,7 @@ class GmailMailbox:
         messages = []
         warnings = []
         complete = True
+        attachment_budget = [MAX_FETCH_ATTACHMENT_BYTES]
         lower, upper = selection.bounds()
         for ref in refs():
             mid = ref["id"]
@@ -340,6 +409,10 @@ class GmailMailbox:
                     userId=self.user_id, id=mid, format="full"
                 ).execute()
             message = Email.from_gmail(raw)
+            # Gmail has no reliable starts-with operator. Filter the actual
+            # subject before date warnings and before counting the message cap.
+            if not selection.matches_subject(message):
+                continue
             if message.timestamp_ms is None and (lower is not None or upper is not None):
                 warnings.append(f"Excluded {mid}: cannot establish its date.")
                 complete = False
@@ -351,7 +424,7 @@ class GmailMailbox:
                     f"Stopped at {selection.max_messages} messages; this is a partial selection."
                 )
                 break
-            messages.append(message)
+            messages.append(replace(message, attachment_contents=self._read_attachments(raw, attachment_budget)))
         messages.sort(key=lambda m: (m.timestamp_ms or 0, m.message_id))
         return SelectionResult(
             account_id=self.account_id(), selection=selection, messages=messages,

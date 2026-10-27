@@ -8,7 +8,7 @@ from eml_core.ai import OllamaClient, ModelError, BackgroundAnalysis, analyse_ba
 from eml_core import Email, ProfileStore, Selection, SelectionResult
 from eml_core.documents import BackgroundStore
 from invoice.models import BillingAnalysis
-from invoice.service import DraftStore, generate_draft
+from invoice.service import DraftStore, generate_draft, build_inputs
 from invoice.renderer import render_docx
 
 
@@ -96,6 +96,49 @@ class GenerationTests(unittest.TestCase):
         for model in (FakeModel(bad_quote=True), FakeModel(wrong_id=True)):
             with self.subTest(model=model), self.assertRaises(ModelError):
                 self.generate(model)
+
+    def test_attachment_quotes_are_validated_and_exported_with_their_exact_source(self):
+        from dataclasses import replace
+        from docx import Document
+        from eml_core.attachments import EmailAttachment
+        from eml_core.documents import DocumentPart
+        from invoice.validator import validate_activity_evidence
+        attachment = EmailAttachment(
+            "2", "review.txt", "text/plain", parts=(DocumentPart("text", "The reconciliation is complete."),),
+        )
+        self.result.messages = [replace(self.message, attachment_contents=(attachment,))]
+        draft = self.generate()
+        value = draft["analysis"]
+        citation = {"message_id": "m1", "quote": "The reconciliation is complete.",
+                    "attachment_part_id": "2", "location": "text"}
+        value["activities"][0]["evidence"] = [citation]
+        validate_activity_evidence(BillingAnalysis.model_validate(value), self.result.messages)
+        document = Document(io.BytesIO(render_docx(draft)))
+        text = "\n".join(p.text for p in document.paragraphs)
+        self.assertIn("review.txt", text)
+        self.assertIn("part 2", text)
+        self.assertIn(citation["quote"], text)
+        for change in [
+            {"message_id": "outside"}, {"attachment_part_id": "3"}, {"location": "page 2"},
+            {"quote": "Invented work"}, {"attachment_part_id": ""}, {"quote": "\n\t"},
+        ]:
+            with self.subTest(change=change), self.assertRaises(ModelError):
+                value["activities"][0]["evidence"] = [{**citation, **change}]
+                validate_activity_evidence(BillingAnalysis.model_validate(value), self.result.messages)
+
+    def test_attachment_content_and_notices_follow_only_chosen_emails(self):
+        from dataclasses import replace
+        from eml_core.attachments import EmailAttachment
+        from eml_core.documents import DocumentPart
+        readable = EmailAttachment("1", "advice.txt", "text/plain", parts=(DocumentPart("text", "Work evidence"),))
+        unread = EmailAttachment("2", "scan.pdf", "application/pdf", warnings=("Needs OCR",))
+        self.result.messages = [replace(self.message, attachment_contents=(readable, unread)),
+                                Email("excluded", "t2", body="Not chosen", attachment_contents=(readable,))]
+        payload, _ = build_inputs(self.store.context(self.cid), [], self.result, ["m1"])
+        self.assertEqual(len(payload["selected_email_evidence"]), 1)
+        self.assertEqual(payload["selected_email_evidence"][0]["attachment_contents"][0]["parts"][0]["text"], "Work evidence")
+        self.assertEqual(payload["selection_scope"]["attachment_warnings"][0]["filename"], "scan.pdf")
+        self.assertEqual(payload["selection_scope"]["excluded_message_ids"], ["excluded"])
 
     def test_whitespace_only_email_evidence_is_rejected(self):
         for quote in (" ", "\n\t  ", "\u2003"):

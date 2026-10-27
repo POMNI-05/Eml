@@ -69,6 +69,23 @@ class MailboxTests(unittest.TestCase):
         )
         self.assertTrue(result.complete)
 
+    def test_subject_prefixes_are_literal_case_insensitive_and_checked_before_the_limit(self):
+        messages = [raw_message(mid) for mid in ("other", "match", "reply")]
+        for message, subject in zip(messages, ("Other Tax advice", "  TAX advice completed", "Re: Tax advice")):
+            next(h for h in message["payload"]["headers"] if h["name"] == "Subject")["value"] = subject
+        result = GmailMailbox(FakeGmail(messages)).select(Selection(
+            label_ids=("L1",), subject_prefix="tax", excluded_subject_prefix="Re:", max_messages=1,
+        ))
+        self.assertEqual([message.message_id for message in result.messages], ["match"])
+        self.assertTrue(result.complete)
+        self.assertEqual(result.to_dict()["selection"]["subject_prefix"], "tax")
+
+    def test_subject_prefix_does_not_drop_partial_first_word_matches(self):
+        message = raw_message("partial")
+        next(h for h in message["payload"]["headers"] if h["name"] == "Subject")["value"] = "Taxation advice"
+        result = GmailMailbox(FakeGmail([message])).select(Selection(label_ids=("L1",), subject_prefix="Tax"))
+        self.assertEqual([message.message_id for message in result.messages], ["partial"])
+
     def test_sydney_inclusive_dates_and_dst(self):
         spec = Selection(label_ids=("L1",), start_date=date(2026, 10, 4),
                          end_date=date(2026, 10, 4))

@@ -8,6 +8,8 @@ from eml_core.ai import StrictModel
 class MailCitation(StrictModel):
     message_id: str = Field(min_length=1)
     quote: str = Field(min_length=1, max_length=1600)
+    attachment_part_id: str = ""
+    location: str = ""
 
 
 class WorkActivity(StrictModel):

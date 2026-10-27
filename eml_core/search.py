@@ -14,6 +14,8 @@ class ClientSearch:
     query: str
     terms: tuple[str, ...]
     source_fact_ids: tuple[str, ...]
+    match_mode: str = "any"
+    excluded_terms: tuple[str, ...] = ()
 
 
 def _quoted(value: str) -> str:
@@ -25,37 +27,81 @@ def _quoted(value: str) -> str:
     return '"' + value + '"'
 
 
-def build_client_search(context: dict, additional_terms=()) -> ClientSearch:
-    terms, clauses, source_ids = [], [], []
+def _normalise_terms(values):
+    if isinstance(values, str):
+        values = [values]
+    unique = {}
+    for value in values:
+        if not isinstance(value, str):
+            raise ValueError("Search entries must be text.")
+        value = " ".join(value.split())
+        if value:
+            unique.setdefault(value.casefold(), value)
+    return list(unique.values())
+
+
+def _email_clause(value):
+    quoted = _quoted(value)
+    return f"(from:{quoted} OR to:{quoted} OR cc:{quoted})"
+
+
+def _is_email(value):
+    return bool(re.fullmatch(r'[^@\s<>:"(){}\\]+@[^@\s<>:"(){}\\]+', value))
+
+
+def build_client_search(context: dict, additional_terms=(), *, match_mode="any",
+                        excluded_terms=(), include_profile=True) -> ClientSearch:
+    """Compile literal entries; exclusions always apply outside the any/all group.
+
+    The UI passes include_profile=False because saved identities are already
+    visible, removable entries. Other callers keep the original profile default.
+    """
+    if match_mode not in {"any", "all"}:
+        raise ValueError("Choose any or all search entries.")
+    identities, source_lookup = {}, {}
     for fact in context.get("confirmed_facts", []):
         field, value = fact["field"], fact["value"]
         additions = []
         if field == "contacts":
             address = value["email"]
-            q = _quoted(address)
-            additions = [(address, f"from:{q} to:{q} cc:{q}")]
+            additions = [(address, _email_clause(address))]
         elif field == "entities":
             additions = [(value["name"], _quoted(value["name"]))]
         elif field == "aliases":
             additions = [(value, _quoted(value))]
-        if additions:
-            source_ids.append(fact["fact_id"])
         for term, clause in additions:
-            if term.casefold() not in {t.casefold() for t in terms}:
-                terms.append(term)
-                clauses.append(clause)
-    for term in additional_terms:
-        if term.strip() and term.casefold() not in {t.casefold() for t in terms}:
-            terms.append(term.strip())
-            clauses.append(_quoted(term))
+            key = " ".join(term.split()).casefold()
+            identities.setdefault(key, (term, clause))
+            source_lookup.setdefault(key, []).append(fact["fact_id"])
+    defaults = [value[0] for value in identities.values()] if include_profile else []
+    terms = _normalise_terms(defaults + _normalise_terms(additional_terms))
+    clauses, source_ids = [], []
+    for term in terms:
+        key = term.casefold()
+        clause = identities[key][1] if key in identities else (
+            _email_clause(term) if _is_email(term) else _quoted(term)
+        )
+        clauses.append(clause)
+        source_ids.extend(source_lookup.get(key, []))
     if not clauses:
         raise ValueError(
             "Confirm a contact email, company name or alias first, or enter a search term. "
             "You can also choose Gmail labels without completing the profile."
         )
+    positive = "{" + " ".join(clauses) + "}" if match_mode == "any" else (
+        "(" + " AND ".join(clauses) + ")"
+    )
+    exclusions = _normalise_terms(excluded_terms)
+    negative = []
+    for term in exclusions:
+        if _is_email(term):
+            negative.extend(f"-{field}:{_quoted(term)}" for field in ("from", "to", "cc"))
+        else:
+            negative.append("-" + _quoted(term))
     return ClientSearch(
-        query="{" + " ".join(clauses) + "} -in:spam -in:trash",
+        query=" ".join([positive, *negative, "-in:spam", "-in:trash"]),
         terms=tuple(terms), source_fact_ids=tuple(dict.fromkeys(source_ids)),
+        match_mode=match_mode, excluded_terms=tuple(exclusions),
     )
 
 

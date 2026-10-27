@@ -3,7 +3,8 @@ google-api-python-client
 google-auth
 google-auth-oauthlib
 pydantic>=2
-streamlit
+streamlit>=1.57
 uvicorn
 python-docx
 pypdf
+openpyxl
