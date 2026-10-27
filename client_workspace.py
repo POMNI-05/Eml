@@ -16,6 +16,7 @@ import streamlit as st
 from eml_core import GmailMailbox, ProfileStore, RuleExtractor, Selection, update_profile
 from eml_core.profiles import SCALAR_FIELDS
 from eml_core.folders import ClientFolderStore
+from eml_core.client_methods import ClientSearchMethodStore
 from fetch_emails import get_gmail_service
 from outlook_adapter import get_selected_outlook_message_ids
 from eml_core.search import match_reasons
@@ -139,6 +140,7 @@ with ProfileStore(DB_PATH) as store:
 
         with st.container():
             folder_store = ClientFolderStore(store)
+            search_store = ClientSearchMethodStore(store)
             folder_tab, mail_tab, generation_tab = st.tabs(
                 [FOLDERS, EMAILS, DRAFT], key="workspace_step", on_change="rerun",
             )
@@ -229,7 +231,7 @@ with ProfileStore(DB_PATH) as store:
                             st.info("Load folders from Gmail, then choose the client's folder paths. No email is read by loading the folder list.")
                         st.caption("Outlook On My Computer and Smart Folders are separate from Gmail-synced folders.")
                     elif mode == "Client search":
-                        plan, subject_prefix, excluded_subject_prefix = client_search_panel(store.context(client_id))
+                        plan, subject_prefix, excluded_subject_prefix = client_search_panel(store.context(client_id), search_store, st.session_state.get("workspace_account", ""))
                         client_query = plan.query if plan else ""
                     elif mode == "Internet Message-IDs":
                         text = st.text_area("Paste one Internet Message-ID per line")

@@ -79,6 +79,10 @@ of those written** or **Match ALL of those written** matching. **Exclusion filte
 prefixes without requiring Gmail query syntax. Saved search entries can be removed;
 they are not silently added back. Subject prefixes are checked locally before
 counting the message limit.
+Saved searches are stored in the local user profile per client and Gmail account.
+They are included as client background metadata when preparing a draft, so the
+draft records how the correspondence was found without treating the search
+criteria as proof that work was performed.
 Changing the client, folders, search filters or date scope clears the previous email selection
 and returns the workflow to the first step.
 

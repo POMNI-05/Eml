@@ -175,7 +175,7 @@ def _reset_client_search(state_key, widget_prefix, defaults):
         st.session_state.pop(widget_prefix + field, None)
 
 
-def client_search_panel(context):
+def client_search_panel(context, search_store=None, account_id=""):
     """Plain-language search controls; selected entries define the full scope."""
     try:
         defaults = list(build_client_search(context).terms)
@@ -219,6 +219,14 @@ def client_search_panel(context):
             args=(state_key, widget_prefix, defaults),
             help="Restore saved client names and emails, and clear the extra filters.",
         )
+    if search_store and account_id:
+        if st.button("Save this search for this client", disabled=not terms):
+            search_store.save(context["client_id"], account_id, {
+                "terms": list(terms), "match_mode": "all" if match == choices[1] else "any",
+                "excluded_terms": list(excluded), "subject_prefix": prefix.strip(),
+                "excluded_subject_prefix": hide_prefix.strip(),
+            })
+            st.success("Search method saved for this client.")
     st.session_state[state_key] = {
         "terms": terms, "match": match, "match_mode": "all" if match == choices[1] else "any", "excluded": excluded,
         "prefix": prefix, "hide_prefix": hide_prefix,

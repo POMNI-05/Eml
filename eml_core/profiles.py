@@ -205,6 +205,13 @@ class ProfileStore:
                 processed_at TEXT NOT NULL,
                 PRIMARY KEY(client_id, mailbox_id, message_id)
             );
+            CREATE TABLE IF NOT EXISTS client_search_methods (
+                client_id TEXT NOT NULL REFERENCES clients(client_id),
+                account_id TEXT NOT NULL,
+                methods_json TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                PRIMARY KEY(client_id, account_id)
+            );
         """)
 
     def __enter__(self):
@@ -389,10 +396,14 @@ class ProfileStore:
         name = self.connection.execute(
             "SELECT display_name FROM clients WHERE client_id=?", (client_id,)
         ).fetchone()[0]
+        row = self.connection.execute(
+            "SELECT methods_json FROM client_search_methods WHERE client_id=? LIMIT 1", (client_id,)
+        ).fetchone()
         return {
             "client_id": client_id, "display_name": name,
             "confirmed_facts": [f for f in facts if f["field"] != "potential_need"],
             "possible_needs": [f for f in facts if f["field"] == "potential_need"],
+            "saved_search_methods": json.loads(row[0]) if row else [],
             "note": "Possible needs are hypotheses. This profile is not evidence of completed work.",
         }
 
