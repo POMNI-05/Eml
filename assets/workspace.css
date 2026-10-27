@@ -1,0 +1,78 @@
+:root { --eml-green: #176b57; --eml-ink: #182c35; --eml-muted: #697780; --eml-line: #e1e7e8; }
+[data-testid="stAppViewContainer"] { background: #f8faf9; }
+[data-testid="stHeader"] { background: rgba(248, 250, 249, .94); }
+[data-testid="stMainBlockContainer"] { max-width: 1480px; padding: 1.8rem 2rem 3rem; }
+.eml-appbar { display: flex; align-items: center; gap: 18px; margin: 0 0 24px; min-height: 42px; }
+.eml-appbar-onboarding, .st-key-onboarding_shell { max-width: 1000px; margin-left: auto; margin-right: auto; }
+.eml-app-label { font-size: 13px; color: var(--eml-muted); border-left: 1px solid var(--eml-line); padding-left: 18px; }
+.st-key-gmail_connection { background: white; border-radius: 13px; }
+.st-key-gmail_connection h2 { font-size: 26px; letter-spacing: -.6px; margin-top: 4px; }
+.st-key-gmail_connection h3 { font-size: 18px; }
+.st-key-gmail_connection [data-testid="stVerticalBlock"] { gap: 12px; }
+.st-key-next_steps [data-testid="stVerticalBlock"] { gap: 8px; }
+.st-key-next_steps h4 { font-size: 16px; margin-top: 0; }
+.st-key-next_steps button { min-height: 36px; justify-content: flex-start; }
+.st-key-next_steps [data-testid="stCaptionContainer"] p { font-size: 12px; margin-bottom: 8px; }
+.eml-login-icon { display: flex; align-items: center; justify-content: center; width: 48px; height: 48px; margin: 5px 0 10px; color: var(--eml-green); background: #e9f3ed; border-radius: 13px; }
+.st-key-header_onboarding { max-width: 1000px; margin-left: auto; margin-right: auto; }
+.eml-connection-pill { display: inline-flex; align-items: center; gap: 8px; border-radius: 999px; padding: 8px 14px; font-size: 12px; white-space: nowrap; }
+.eml-connection-pill.disconnected { color: #9c4141; background: #fbefed; border: 1px solid #efd2cd; }
+.eml-status-light { width: 8px; height: 8px; border-radius: 50%; background: #c85151; }
+.st-key-gmail_status button { border-radius: 999px !important; min-height: 36px; background: #e9f3ed; color: #176b57; border-color: #bed7c7; font-size: 12px; }
+[data-testid="stPopoverBody"]:has(.st-key-gmail_settings) { width: min(420px, calc(100vw - 32px)) !important; }
+.st-key-email_source_panel, .st-key-period_scope_panel, .st-key-client_background_panel { background: white; border-radius: 13px; }
+.st-key-email_source_panel h3, .st-key-period_scope_panel h3, .st-key-client_background_panel h3 { font-size: 20px; }
+.st-key-email_source_panel [data-testid="stRadio"] [data-testid="stCaptionContainer"] p { line-height: 1.6; }
+[data-testid="stSidebar"] { background: #f0f4f2; border-right: 1px solid var(--eml-line); }
+[data-testid="stSidebarUserContent"] { padding-top: 1.5rem; }
+[data-testid="stSidebar"] [data-testid="stExpander"] { background: transparent; }
+.eml-brand { display: flex; align-items: center; gap: 12px; color: var(--eml-ink); font-size: 32px; font-weight: 750; letter-spacing: -1.6px; }
+.eml-mark { display: inline-flex; align-items: center; justify-content: center; width: 37px; height: 37px; background: var(--eml-green); color: white; border-radius: 11px; font: italic 30px Georgia, serif; }
+.eml-dot { color: var(--eml-green); }
+.eml-brand-note { color: #7b8b83; font-size: 9px; font-weight: 650; letter-spacing: 1.5px; padding: 12px 0 30px; }
+.eml-topline { display: flex; justify-content: space-between; align-items: center; color: var(--eml-muted); font-size: 10px; font-weight: 650; letter-spacing: 1.5px; margin: 0 0 16px; gap: 12px; }
+.eml-status { color: #748078; background: #edf0ed; padding: 6px 10px; border-radius: 20px; letter-spacing: 0; font-size: 11px; font-weight: 500; }
+.eml-status.connected { color: #176b57; background: #e5f2eb; }
+.eml-title { color: var(--eml-ink); font-size: clamp(26px, 3vw, 34px); font-weight: 620; letter-spacing: -1.3px; padding: 0; line-height: 1.2; margin: 0 0 9px; }
+.eml-subtitle { color: var(--eml-muted); font-size: 14px; margin: 0 0 18px; }
+.eml-client { border-top: 1px solid var(--eml-line); padding: 18px 0 5px; font-size: 15px; font-weight: 650; color: var(--eml-ink); }
+.eml-client span { display: inline-block; margin-left: 18px; color: var(--eml-muted); font-size: 12px; font-weight: 400; }
+[data-testid="stTabs"] [role="tablist"] { gap: 10px; border-bottom: 0; padding-bottom: 1px; margin: 12px 0 18px; }
+[data-testid="stTabs"] [role="tab"] { flex: 1; padding: 12px 18px; font-size: 13px; border: 1px solid var(--eml-line); border-radius: 9px; background: white; }
+[data-testid="stTabs"] [aria-selected="true"] { color: var(--eml-green); background: #e9f3ed; border-color: #75a78d; }
+[data-testid="stTabs"] [data-baseweb="tab-highlight"] { background-color: var(--eml-green); }
+[data-testid="stVerticalBlockBorderWrapper"] > div { border-radius: 13px; border-color: var(--eml-line); }
+[data-testid="stTextInput"] input, [data-baseweb="select"] > div, [data-testid="stTextArea"] textarea { background-color: white; border-radius: 8px; }
+[data-testid="stButton"] button, [data-testid="stDownloadButton"] button { border-radius: 8px; font-size: 13px; min-height: 40px; }
+[data-testid="stButton"] button[kind="primary"] { background: var(--eml-green); border-color: var(--eml-green); }
+[data-testid="stButton"] button[kind="primary"]:hover { background: #105541; border-color: #105541; }
+[data-testid="stButton"] button[kind="primary"]:disabled { background: #dce6e0; border-color: #dce6e0; color: #899b90; }
+[data-testid="stMetricLabel"] p { color: var(--eml-muted); font-size: 12px; }
+[data-testid="stMetricValue"] { font-size: 25px; color: var(--eml-ink); }
+.eml-welcome { padding: 34px 0 24px; max-width: 640px; }
+.eml-eyebrow { color: var(--eml-green); font-size: 10px; font-weight: 700; letter-spacing: 1.6px; margin-bottom: 15px; }
+.eml-welcome h2 { font: 32px/1.2 Georgia, serif; letter-spacing: -.6px; color: var(--eml-ink); margin: 0 0 14px; }
+.eml-welcome p { font-size: 15px; color: var(--eml-muted); line-height: 1.7; }
+.eml-step { background: white; padding: 26px 23px; border: 1px solid var(--eml-line); border-radius: 12px; min-height: 220px; margin-bottom: 20px; }
+.eml-step-number { display: block; color: var(--eml-green); font-size: 12px; font-weight: 700; margin-bottom: 24px; }
+.eml-step h3 { color: var(--eml-ink); font-size: 16px; font-weight: 600; margin: 0 0 10px; }
+.eml-step p { color: var(--eml-muted); font-size: 13px; line-height: 1.7; margin: 0; }
+.eml-empty { background: white; border: 1px dashed #cddbd3; text-align: center; padding: 55px 22px; border-radius: 12px; margin: 12px 0 22px; }
+.eml-empty-icon { display: inline-flex; justify-content: center; align-items: center; width: 44px; height: 44px; background: #edf5f0; color: var(--eml-green); border-radius: 12px; font-size: 26px; margin-bottom: 15px; }
+.eml-empty h3 { font-size: 18px; font-weight: 550; color: var(--eml-ink); margin: 0 0 12px; }
+.eml-empty p { color: var(--eml-muted); font-size: 13px; line-height: 1.8; }
+.eml-message-head { padding: 4px 0 18px; border-bottom: 1px solid var(--eml-line); margin-bottom: 16px; }
+.eml-message-head h3 { font-size: 19px; color: var(--eml-ink); font-weight: 600; margin: 0 0 15px; line-height: 1.4; }
+.eml-message-head p { font-size: 12px; line-height: 1.9; color: #52656a; overflow-wrap: anywhere; margin-bottom: 6px; }
+.eml-message-head strong { color: var(--eml-ink); font-weight: 550; display: inline-block; min-width: 38px; }
+.eml-message-head span { font-size: 11px; color: var(--eml-muted); }
+.eml-email-body { font-size: 13px; line-height: 1.85; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 340px; overflow: auto; color: #334a50; margin-bottom: 18px; }
+.eml-quote { background: #eef6f0; border-left: 3px solid #4a9474; color: #284e3f; padding: 15px 18px; font-size: 13px; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; border-radius: 0 7px 7px 0; }
+@media (max-width: 850px) {
+  [data-testid="stMainBlockContainer"] { padding: 1.5rem 1rem 3rem; }
+  [data-testid="stTabs"] [role="tablist"] { gap: 18px; }
+  .eml-client span { display: block; margin: 6px 0 0; overflow-wrap: anywhere; }
+  .eml-step { min-height: auto; padding: 20px; }
+  .eml-step-number { margin-bottom: 12px; }
+  .st-key-header_connected .eml-app-label, .st-key-header_onboarding .eml-app-label { display: none; }
+}

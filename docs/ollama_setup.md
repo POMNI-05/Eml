@@ -16,7 +16,7 @@ ollama list
 可以选择其他已下载、支持结构化输出的本地模型。上面只是接入示例，不保证适合所有电脑。
 Linux 等未自动启动服务的环境，需要先运行 ollama serve。
 
-3. 在 Eml 左侧展开 **Local AI setup**，保留本机地址：
+3. 登录 Gmail 后，打开顶部 **Gmail connected → Local AI setup**，保留本机地址：
 
 ~~~text
 http://127.0.0.1:11434
@@ -27,13 +27,16 @@ http://127.0.0.1:11434
 
 ## 让背景文件参与工作
 
-1. 在 **Background documents** 上传客户资料、公司关系说明或 engagement 文件。
+1. 在右侧 **Client background → Client details & documents → Background documents**
+   上传客户资料、公司关系说明或 engagement 文件。
    Word 表格和可搜索 PDF 的页码/位置会保留；扫描页不做 OCR。
 2. 点击 **Analyse documents with AI**，获得公司、联系人、关系、业务和服务范围候选。
 3. 在 **Client context** 核对引用并确认。未确认的解释不进入已确认客户档案。
-4. 在 **Choose emails → Client search** 中，已确认的公司名、联系人邮箱和别名会参与检索。
-   最终邮件仍由用户在 Include these messages 中选择。
-5. 在 **Generate draft** 选择要交给模型的背景文件，点击 **Generate work record draft**。
+4. 默认在 **Client & folders** 选择客户对应的 Gmail/IMAP 同步文件夹。
+   也可将 Email source 切换为 **Client search**，使用已确认公司名、联系人邮箱和别名检索。
+   点击 **Open selected folders →** 或 **Find emails →**，进入邮件审核。
+5. 在 **Review emails** 勾选相关邮件，点击 **Use selected emails →**。
+   在 **Draft & export → Draft inputs** 选择背景文件，再点击 **Generate work record draft**。
 
 每次生成传入的是：
 

@@ -20,11 +20,16 @@
 
 ## 在 Eml 里上传
 
-1. 展开左侧 **Gmail setup**。
+1. 打开 Eml，首页左侧先显示 Gmail 登录，右侧是后续工作步骤。
 2. 把下载的文件拖入 **Drop Google credentials JSON here**。
-3. 点击 **Save Google credentials**。原下载文件名可以保留，程序会规范保存为 credentials.json。
+3. 点击 **Save and continue**。原下载文件名可以保留，程序会规范保存为 credentials.json。
 4. 点击 **Connect Gmail**，在本机打开的浏览器里选择实际需要读取的 Gmail 账户并授权。
-5. 返回 App，看到 Connected mailbox 后，就可以加载标签和读取选定邮件。
+5. 返回 App，看到 Connected mailbox 后，右侧会显示 **Client** 和文件夹操作。
+   用 **New client → Add client** 添加客户，或直接选择已有客户。
+
+如果本机已有 credentials.json 或 token.json，首页直接显示登录按钮，不再显示上传区域。
+连接后，账户和本地 AI 设置收起在顶部 **Gmail connected** 状态按钮内。
+需要更换配置时，可在 Connection help 或 Gmail connected 中主动选择更换 Google app file。
 
 | 本机文件 | 用途 |
 | --- | --- |
@@ -35,7 +40,7 @@
 
 凭证和 token 默认保存在项目根目录，也可用 EML_AUTH_DIR 指定目录。
 程序不显示文件中的 secret 或 token。更换为不同客户端配置时，需要重新授权。
-**Forget local Google sign-in** 只删除本机 token，不撤销 Google 账户后台已授予的权限。
+**Gmail connected → Disconnect Gmail** 只删除本机 token，不撤销 Google 账户后台已授予的权限。
 
 ## 常见问题
 
