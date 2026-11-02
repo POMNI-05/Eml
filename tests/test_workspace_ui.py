@@ -538,5 +538,76 @@ class WorkspaceTests(unittest.TestCase):
             ))
 
 
+    def test_cloud_package_and_restore_work_without_a_local_model_or_network_send(self):
+        from eml_core import ProfileStore
+        from invoice.exchange import ExchangeStore
+        from invoice.service import DraftStore
+        from unittest.mock import Mock
+        self.api.data["m1"] = raw_message("m1", body="I completed the ANZ reconciliation.")
+        with patch("cloud_panels.GeminiClient") as cloud_model:
+            app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
+            self.create(app, "Alex group")
+            self.load_selection(app)
+            cid = app.session_state["workspace_client"]
+            element(app.checkbox, "Keep this client's processing local").set_value(False)
+            element(app.text_area, "Extra names to replace before cloud use").set_value("ANZ => BANK")
+            element(app.button, "Save generation preferences").click().run()
+            element(app.radio, "Generation method").set_value("Cloud JSON / Gemini").run()
+            element(app.button, "Prepare cloud evidence package").click().run()
+            self.assertFalse(app.exception)
+            self.assertTrue(element(app.button, "Send reviewed package to Gemini").disabled)
+            with ProfileStore(os.environ["EML_PROFILE_DB"]) as profiles:
+                exchanges = ExchangeStore(profiles)
+                package = exchanges.get(cid, exchanges.list(cid)[0]["bundle_id"])
+            self.assertNotIn("ANZ", json.dumps(package.request))
+            message = package.request["input"]["evidence"]["selected_email_evidence"][0]
+            reply = {"bundle_id": package.bundle_id,
+                     "evidence_sha256": package.request["input"]["evidence_sha256"],
+                     "analysis": {"client_summary": "Reconciliation",
+                         "activities": [{"entity": "", "description": message["body"], "status": "completed",
+                                         "evidence": [{"message_id": message["message_id"], "quote": message["body"]}],
+                                         "uncertainties": []}], "open_questions": []}}
+            # Reopen with no email selection: the saved local snapshot must
+            # suffice to restore an asynchronously returned response.
+            app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
+            self.connect(app)
+            element(app.selectbox, "Client").set_value(cid).run()
+            self.assertTrue(any(item.label == "Evidence package" for item in app.selectbox))
+            with self.assertRaises(KeyError):
+                app.session_state["workspace_result"]
+            import streamlit as st
+            original_upload = st.file_uploader
+            upload = Mock(size=len(json.dumps(reply)))
+            upload.getvalue.return_value = json.dumps(reply).encode()
+            def file_upload(label, *args, **kwargs):
+                if label == "Upload cloud response JSON to restore locally":
+                    return upload
+                return original_upload(label, *args, **kwargs)
+            with patch("cloud_panels.st.file_uploader", side_effect=file_upload):
+                app.run()
+                element(app.button, "Restore and save response").click().run()
+            self.assertFalse(app.exception)
+            self.assertIn("ANZ", app.session_state[f"work_draft_{cid}"]["analysis"]["activities"][0]["description"])
+            element(app.button, "Open saved draft").click().run()
+            self.assertTrue(any(d.proto.label == "Download Word record" for d in app.get("download_button")))
+            with ProfileStore(os.environ["EML_PROFILE_DB"]) as profiles:
+                self.assertEqual(len(DraftStore(profiles).list(cid)), 1)
+            self.create(app, "Another group")
+            self.assertFalse(any(item.label == "Evidence package" for item in app.selectbox))
+            cloud_model.assert_not_called()
+
+    def test_local_only_client_cannot_prepare_a_cloud_package(self):
+        from eml_core import ProfileStore
+        from invoice.exchange import ExchangeStore
+        app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
+        self.create(app, "Private client")
+        self.load_selection(app)
+        element(app.radio, "Generation method").set_value("Cloud JSON / Gemini").run()
+        self.assertFalse(any(item.label == "Prepare cloud evidence package" for item in app.button))
+        cid = app.session_state["workspace_client"]
+        with ProfileStore(os.environ["EML_PROFILE_DB"]) as profiles:
+            self.assertEqual(ExchangeStore(profiles).list(cid), [])
+
+
 if __name__ == "__main__":
     unittest.main()

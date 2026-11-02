@@ -49,6 +49,10 @@
   Workspace 管理员策略也可能限制第三方应用访问，需要由组织管理员处理。
 - **Gmail API 未启用**：在创建该 OAuth 客户端的同一个 Cloud 项目中启用 Gmail API。
 - **已保存授权但连接失效**：忘记本地登录，再点击 Connect Gmail 重新授权。
+  External + Testing 的 OAuth 项目所发 refresh token 通常七天到期。
+  长期公司内部使用应核对 Workspace Internal 等适用配置；公开 Production 与
+  restricted-scope 验证不能仅凭一个开关视为完成。参见
+  [Google refresh token 说明](https://developers.google.com/identity/protocols/oauth2)。
 - **浏览器授权无法返回**：在运行 App 的同一台电脑完成授权。本版使用本机 localhost 回调，
   尚未改造成托管网站的多用户 OAuth 服务。
 

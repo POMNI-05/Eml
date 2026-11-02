@@ -28,6 +28,22 @@ Human review, corrections, and Word / JSON export
 The Streamlit workspace calls shared Python services directly. The existing
 FastAPI bridge remains available for Outlook integration.
 
+## Optional local launcher and cloud generation
+
+The `codex/local-cloud-billing` extension adds Mac/Windows setup and launch
+shortcuts, per-client output preferences, locally mapped pseudonymised JSON
+exchange, and an optional Gemini REST adapter. Local Ollama remains available;
+preparing a cloud package does not require a local model. Cloud processing is
+off by default for each client. This extension builds on `main` at `f26e55c`
+and preserves its folders, search, attachment extraction and review workflow.
+
+See [local installation and operation](docs/local_install.md) and
+[research, architecture and data boundaries](docs/local_cloud_architecture.md).
+GitHub Pages cannot host the existing Python backend; the launcher runs it on
+the user's computer, independently of the developer's laptop. A cloud API call
+is a separate, explicit choice. The generated output is still a reviewable work
+record; it does not calculate fees or issue an invoice.
+
 ## Run the workspace
 
 The workspace shares the existing read-only Gmail OAuth login. Client profiles,

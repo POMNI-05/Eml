@@ -14,6 +14,7 @@ from eml_core.search import build_client_search
 from invoice.service import DraftStore, build_inputs, generate_draft, input_digest
 from invoice.renderer import render_docx
 from workspace_ui import activity_sources
+from cloud_panels import generation_settings, pending_cloud_panel, prepare_cloud_panel
 
 
 def _clear_account(clear_selection):
@@ -368,6 +369,8 @@ def generation_panel(store, client_id, model_client, language):
     background = BackgroundStore(store)
     st.subheader("Prepare, review and export")
     st.caption("Build a work record from your selected emails. Check the source before confirming each activity.")
+    settings = generation_settings(store, client_id)
+    pending_cloud_panel(store, client_id, settings)
     saved = drafts.list(client_id)
     if saved:
         with st.expander("Saved drafts"):
@@ -406,7 +409,9 @@ def generation_panel(store, client_id, model_client, language):
         )
         chosen_docs = [by_id[value] for value in doc_ids]
         context = store.context(client_id)
-        payload, _ = build_inputs(context, chosen_docs, result, selected_ids, language)
+        payload, _ = build_inputs(
+            context, chosen_docs, result, selected_ids, language, style_instructions=settings["style"]
+        )
         if payload["selection_scope"]["attachment_warnings"]:
             st.warning("Some attachments were only partly read or could not be read. Check their notices in the email reading pane.")
         for column, label, value in zip(
@@ -415,21 +420,31 @@ def generation_panel(store, client_id, model_client, language):
         ):
             column.metric(label, value)
         st.download_button(
-            "Download AI evidence package", json.dumps(payload, ensure_ascii=False, indent=2),
+            "Download original evidence for local backup", json.dumps(payload, ensure_ascii=False, indent=2),
             file_name="ai_evidence_package.json", mime="application/json",
         )
+        st.caption("This original backup contains client information. Use the masked cloud package for approved cloud processing.")
     if not result.complete:
         st.warning("The mailbox fetch is incomplete; the draft will cover only the selected evidence.")
-    if model_client is None:
+    route = st.radio("Generation method", ["Local Ollama", "Cloud JSON / Gemini"], horizontal=True)
+    key = f"work_draft_{client_id}"
+    if route == "Cloud JSON / Gemini":
+        prepare_cloud_panel(store, client_id, payload, settings)
+        draft = st.session_state.get(key)
+        if not draft or not draft.get("generation"):
+            return
+        signature = input_digest(payload, draft["model"], 0)
+    elif model_client is None:
         st.info("Open Gmail connected → Local AI setup to choose a model for the draft.")
         return
-    signature = input_digest(payload, model_client.model, model_client.context_size)
-    key = f"work_draft_{client_id}"
-    if st.button("Generate work record draft", type="primary"):
+    else:
+        signature = input_digest(payload, model_client.model, model_client.context_size)
+    if route == "Local Ollama" and st.button("Generate work record draft", type="primary"):
         try:
             with st.spinner("Generating activities from email evidence and client background…"):
                 draft = generate_draft(
-                    model_client, context, chosen_docs, result, selected_ids, language
+                    model_client, context, chosen_docs, result, selected_ids, language,
+                    style_instructions=settings["style"],
                 )
                 drafts.save(draft)
             st.session_state[key] = draft

@@ -34,7 +34,7 @@ Return an empty activity list if no work activity is supported.
 Respond in the requested language."""
 
 
-def build_inputs(context, documents, result, selected_ids, language="English"):
+def build_inputs(context, documents, result, selected_ids, language="English", *, style_instructions=""):
     documents = list(documents)
     if any(doc.client_id != context["client_id"] for doc in documents):
         raise ModelError("A document belongs to another client.")
@@ -61,6 +61,8 @@ def build_inputs(context, documents, result, selected_ids, language="English"):
             ],
         },
     }
+    if style_instructions:
+        payload["output_preferences"] = style_instructions
     return payload, messages
 
 
@@ -69,8 +71,10 @@ def input_digest(payload: dict, model: str, context_size: int) -> str:
     return hashlib.sha256(data.encode()).hexdigest()
 
 
-def generate_draft(client, context, documents, result, selected_ids, language="English"):
-    payload, messages = build_inputs(context, documents, result, selected_ids, language)
+def generate_draft(client, context, documents, result, selected_ids, language="English", *, style_instructions=""):
+    payload, messages = build_inputs(
+        context, documents, result, selected_ids, language, style_instructions=style_instructions
+    )
     analysis = client.generate(BillingAnalysis, SYSTEM, payload)
     validate_activity_evidence(analysis, messages)
     return {

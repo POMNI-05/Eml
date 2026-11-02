@@ -26,3 +26,12 @@ client_secret*.json
 ai_evidence_package*.json
 billing_draft*.json
 billing_work_record*.docx
+
+# Optional cloud workflow exports and locally configured keys
+.env
+.env.*
+!.env.example
+.streamlit/secrets.toml
+eml_cloud_request*.json
+eml_cloud_response*.json
+eml_local_recovery*.json
