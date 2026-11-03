@@ -5,7 +5,7 @@ import socket
 from pathlib import Path
 import tempfile
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import ANY, Mock, patch
 from urllib.parse import parse_qs, urlparse
 
 from eml_core.auth import GmailAuth, CredentialError, validate_credentials
@@ -155,6 +155,37 @@ class CredentialTests(unittest.TestCase):
         self.assertIn("DNS lookup failed", str(caught.exception))
         self.assertIn("dns_resolution_failed", " ".join(logs.output))
         self.assertNotIn("synthetic-private", str(caught.exception) + " ".join(logs.output))
+
+    def test_token_exchange_has_a_network_timeout_for_ui_and_legacy_callers(self):
+        self.auth.save_credentials(credential_bytes())
+        credentials = Mock()
+        credentials.to_json.return_value = "{}"
+        def sign_in(flow, **kwargs):
+            flow.fetch_token(code="synthetic-private-code")
+            return credentials
+        for callback in (None, Mock()):
+            with self.subTest(link_callback=callback is not None):
+                self.auth.token_path.unlink(missing_ok=True)
+                with patch("google_auth_oauthlib.flow.InstalledAppFlow.run_local_server", autospec=True, side_effect=sign_in), \
+                        patch("google_auth_oauthlib.flow.InstalledAppFlow.fetch_token", autospec=True) as exchange, \
+                        patch("googleapiclient.discovery.build"):
+                    self.auth.get_service(on_authorization_url=callback)
+                exchange.assert_called_once_with(ANY, code="synthetic-private-code", timeout=30)
+
+    def test_token_exchange_timeout_is_not_retried_or_logged_with_private_data(self):
+        from requests.exceptions import Timeout
+        self.auth.save_credentials(credential_bytes())
+        def sign_in(flow, **kwargs):
+            flow.fetch_token(code="synthetic-private-code")
+        with patch("google_auth_oauthlib.flow.InstalledAppFlow.run_local_server", autospec=True, side_effect=sign_in), \
+                patch("google_auth_oauthlib.flow.InstalledAppFlow.fetch_token", autospec=True, side_effect=Timeout("synthetic-private-details")) as exchange, \
+                self.assertLogs("eml_core.auth", level="WARNING") as logs, \
+                self.assertRaises(CredentialError) as caught:
+            self.auth.get_service(on_authorization_url=Mock())
+        exchange.assert_called_once()
+        self.assertIn("token exchange timed out", str(caught.exception))
+        self.assertNotIn("synthetic-private", str(caught.exception) + " ".join(logs.output))
+        self.assertFalse(self.auth.token_path.exists())
 
     def test_shared_gmail_entrypoint_forwards_the_sign_in_link_callback(self):
         from fetch_emails import get_gmail_service

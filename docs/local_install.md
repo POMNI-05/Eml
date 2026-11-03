@@ -4,6 +4,41 @@
 开发者电脑关机不影响老板本机的程序。老板自己的电脑休眠或关机后，本机程序仍会停止。
 不同员工安装后各自有数据与授权；本版没有跨电脑同步或多人共享权限。
 
+## 启动环境与可靠性检查
+
+程序能在浏览器打开，不代表后台 Python 能连接 Google。开发执行器/沙箱中的进程可能有
+不同的网络与 macOS 系统服务权限。`nohup` 或分离会话只改变进程生命周期，不证明 DNS、
+Google HTTPS 或 Gmail 授权可用。不要通过删除环境标记、写死 Google IP、关闭证书校验或
+修改系统 DNS 来掩盖执行环境问题。
+
+在实际运行 Eml 的正常终端执行只读检查：
+
+```bash
+.venv/bin/python helpers/check_runtime.py --port 8503
+```
+
+输出包括依赖版本、执行器网络限制标记、原生 DNS、未经授权的 Google HTTPS 连通性、
+本机 Streamlit 健康状态、OAuth 文件元数据以及 SQLite 只读完整性检查。
+该命令不会启动登录、刷新令牌、读取邮件、修改数据或显示 token/secret。
+`--offline` 跳过外网 DNS/HTTPS；`--auth-dir` 与 `--database` 可明确指定实际数据位置。
+没有报错时退出码为 0，有错误时为 1；warning（例如尚未启动本机服务）需要人工判断。
+
+`local_workspace=ok` 只证明某个 Streamlit 服务可响应，不证明 Gmail 已连接。
+`saved_authorization=ok` 只说明保存了 refresh token，不代表它未被 Google 撤销。
+`execution_context` 中的标记是诊断线索，不是检测或解除系统沙箱的接口。
+交互授权最多等待三分钟；之后换取令牌的 HTTP 请求明确设置 30 秒超时。
+超时不自动重试同一授权码，也不会删除已有客户资料；需要重新开始一次登录。
+
+长期无人值守不要依赖开发会话或临时后台进程。macOS 可使用由操作系统管理的 LaunchAgent，
+明确指定虚拟环境、代码路径、已有授权/数据库路径、端口和私密日志，并设置崩溃重启与重启间隔。
+安装、启用或替换现有服务前，先确认当前数据路径、备份与端口占用；不要同时启动两个实例。
+LaunchAgent 在用户登录后运行，退出登录、电脑睡眠或关机仍会影响可用性；它不是全天候服务器。
+此外仍须确认 OAuth 项目配置、管理员权限、备份恢复以及日志保留/告警，不能只看首页 HTTP 200。
+
+若需要同事随时远程访问，当前仅监听 localhost 的单用户应用不能直接改成公网监听：
+需要另外设计身份认证、按用户隔离的 Gmail 授权/客户数据、Web OAuth、TLS 与持续在线的主机。
+参考 [Apple 的 launchd 指南](https://developer.apple.com/library/archive/documentation/MacOSX/Conceptual/BPSystemStartup/Chapters/CreatingLaunchdJobs.html)。
+
 ## 首次安装与日常入口
 
 先安装 Python 3.11 或以上版本。取得此分支后，在项目文件夹：

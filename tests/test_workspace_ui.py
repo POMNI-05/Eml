@@ -80,6 +80,7 @@ class WorkspaceTests(unittest.TestCase):
         app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
         self.create(app, "Alex group")
         self.load_selection(app)
+        element(app.radio, "Create the draft").set_value("Local Ollama").run()
         element(app.button, "Load local models").click().run()
         element(app.button, "Generate work record draft").click().run()
         self.assertFalse(app.exception)
@@ -167,6 +168,7 @@ class WorkspaceTests(unittest.TestCase):
             with ProfileStore(os.environ["EML_PROFILE_DB"]) as profiles:
                 self.assertEqual(profiles.context(alex)["confirmed_facts"][0]["value"], note)
             self.load_selection(app)
+            element(app.radio, "Create the draft").set_value("Local Ollama").run()
             element(app.button, "Load local models").click().run()
             element(app.button, "Generate work record draft").click().run()
             self.assertFalse(app.exception)
@@ -183,7 +185,7 @@ class WorkspaceTests(unittest.TestCase):
     def test_action_buttons_advance_and_go_back_without_refetching(self):
         app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
         self.create(app, "Alex group")
-        self.assertEqual(element(app.radio, "Email source").value, "Client folders (IMAP)")
+        self.assertEqual(element(app.radio, "Email source").value, "Client search")
         self.load_selection(app)
         self.assertEqual(app.session_state["workspace_step"], "2. Review emails")
         message_reads = len([c for c in self.api.calls if c[0] == "messages.get"])
@@ -234,6 +236,7 @@ class WorkspaceTests(unittest.TestCase):
         app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
         self.create(app, "Alex group")
         alex = app.session_state["workspace_client"]
+        element(app.radio, "Email source").set_value("Client folders (IMAP)").run()
         element(app.button, "Load folders").click().run()
         element(app.multiselect, "Client folders").set_value(["L1"]).run()
         element(app.checkbox, "Include subfolders").set_value(True).run()
@@ -400,6 +403,7 @@ class WorkspaceTests(unittest.TestCase):
                 self.assertEqual(app.session_state["workspace_selected_ids"], ["m1"])
                 app.run()
                 self.assertEqual(app.session_state["workspace_selected_ids"], ["m1"])
+                element(app.radio, "Create the draft").set_value("Local Ollama").run()
                 element(app.button, "Load local models").click().run()
                 element(app.button, "Generate work record draft").click().run()
                 self.assertFalse(app.exception)
@@ -543,6 +547,7 @@ class WorkspaceTests(unittest.TestCase):
             self.assertEqual(
                 [m.message_id for m in app.session_state["workspace_result"].messages], ["m1"]
             )
+            element(app.radio, "Create the draft").set_value("Local Ollama").run()
             element(app.button, "Generate work record draft").click().run()
             self.assertFalse(app.exception)
             draft = app.session_state[f"work_draft_{cid}"]
@@ -572,6 +577,45 @@ class WorkspaceTests(unittest.TestCase):
             ))
 
 
+    def test_generation_replacement_grid_add_save_and_clear(self):
+        from eml_core import ProfileStore
+        from invoice.templates import GenerationTemplateStore
+
+        app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
+        self.create(app, "Grid client")
+        cid = app.session_state["workspace_client"]
+        self.assertFalse(any(item.label == "Client generation preferences" for item in app.expander))
+        self.assertEqual(len([item for item in app.text_input if item.label.startswith("Original ")]), 3)
+        element(app.button, "Save generation preferences").click().run()
+        with ProfileStore(os.environ["EML_PROFILE_DB"]) as profiles:
+            self.assertEqual(GenerationTemplateStore(profiles).get(cid)["privacy_rules"], "")
+        element(app.text_input, "Original 1").set_value("ANZ").run()
+        element(app.button, "＋").click().run()
+        self.assertEqual(element(app.text_input, "Original 1").value, "ANZ")
+        self.assertEqual(element(app.text_input, "Original 4").value, "")
+        element(app.button, "Save generation preferences").click().run()
+        self.assertTrue(any("Fill both cells" in item.value for item in app.error))
+        element(app.text_input, "Replace with 1").set_value("BANK").run()
+        element(app.text_input, "Original 4").set_value("Example Pty Ltd").run()
+        element(app.text_input, "Replace with 4").set_value("ENTITY").run()
+        element(app.button, "Save generation preferences").click().run()
+        self.assertFalse(app.exception)
+        with ProfileStore(os.environ["EML_PROFILE_DB"]) as profiles:
+            self.assertEqual(GenerationTemplateStore(profiles).get(cid)["privacy_rules"],
+                             "ANZ => BANK\nExample Pty Ltd => ENTITY")
+        # Saved rules survive a new session; all empty cells clear the rules.
+        app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
+        self.connect(app)
+        element(app.selectbox, "Client").set_value(cid).run()
+        self.assertEqual(element(app.text_input, "Original 1").value, "ANZ")
+        self.assertEqual(element(app.text_input, "Original 2").value, "Example Pty Ltd")
+        for index in range(1, 4):
+            element(app.text_input, f"Original {index}").set_value("")
+            element(app.text_input, f"Replace with {index}").set_value("")
+        element(app.button, "Save generation preferences").click().run()
+        with ProfileStore(os.environ["EML_PROFILE_DB"]) as profiles:
+            self.assertEqual(GenerationTemplateStore(profiles).get(cid)["privacy_rules"], "")
+
     def test_cloud_package_and_restore_work_without_a_local_model_or_network_send(self):
         from eml_core import ProfileStore
         from invoice.exchange import ExchangeStore
@@ -582,12 +626,15 @@ class WorkspaceTests(unittest.TestCase):
             app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
             self.create(app, "Alex group")
             self.load_selection(app)
+            self.assertEqual(element(app.radio, "Create the draft").value, "Cloud JSON / Gemini")
+            self.assertFalse(element(app.checkbox, "Keep this client's processing local").value)
             cid = app.session_state["workspace_client"]
             element(app.checkbox, "Keep this client's processing local").set_value(False)
-            element(app.text_area, "Extra names to replace before cloud use").set_value("ANZ => BANK")
+            element(app.text_input, "Original 1").set_value("ANZ")
+            element(app.text_input, "Replace with 1").set_value("BANK")
             element(app.button, "Save generation preferences").click().run()
-            element(app.radio, "Generation method").set_value("Cloud JSON / Gemini").run()
-            element(app.button, "Prepare cloud evidence package").click().run()
+            element(app.radio, "Create the draft").set_value("Cloud JSON / Gemini").run()
+            element(app.button, "Prepare prompt + emails for GPT").click().run()
             self.assertFalse(app.exception)
             self.assertTrue(element(app.button, "Send reviewed package to Gemini").disabled)
             with ProfileStore(os.environ["EML_PROFILE_DB"]) as profiles:
@@ -668,9 +715,11 @@ class WorkspaceTests(unittest.TestCase):
         from invoice.exchange import ExchangeStore
         app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
         self.create(app, "Private client")
+        element(app.checkbox, "Keep this client's processing local").set_value(True).run()
+        element(app.button, "Save generation preferences").click().run()
         self.load_selection(app)
-        element(app.radio, "Generation method").set_value("Cloud JSON / Gemini").run()
-        self.assertFalse(any(item.label == "Prepare cloud evidence package" for item in app.button))
+        element(app.radio, "Create the draft").set_value("Cloud JSON / Gemini").run()
+        self.assertFalse(any(item.label == "Prepare prompt + emails for GPT" for item in app.button))
         cid = app.session_state["workspace_client"]
         with ProfileStore(os.environ["EML_PROFILE_DB"]) as profiles:
             self.assertEqual(ExchangeStore(profiles).list(cid), [])

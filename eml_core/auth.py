@@ -12,6 +12,7 @@ from pathlib import Path
 SCOPES = ["https://www.googleapis.com/auth/gmail.readonly"]
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 LOGGER = logging.getLogger(__name__)
+TOKEN_EXCHANGE_TIMEOUT = 30
 
 
 class CredentialError(ValueError):
@@ -113,6 +114,7 @@ class GmailAuth:
         from google.oauth2.credentials import Credentials
         from google_auth_oauthlib.flow import InstalledAppFlow, WSGITimeoutError
         from googleapiclient.discovery import build
+        from requests.exceptions import Timeout as RequestTimeout
 
         credentials = None
         if self.token_path.exists():
@@ -134,9 +136,13 @@ class GmailAuth:
                 if not self.credentials_path.exists():
                     raise CredentialError("Upload Google Desktop app credentials in Gmail setup first.")
                 validate_credentials(self.credentials_path.read_bytes())
-                flow_class = InstalledAppFlow
+                class BoundedInstalledAppFlow(InstalledAppFlow):
+                    def fetch_token(self, **kwargs):
+                        kwargs.setdefault("timeout", TOKEN_EXCHANGE_TIMEOUT)
+                        return super().fetch_token(**kwargs)
+                flow_class = BoundedInstalledAppFlow
                 if on_authorization_url is not None:
-                    class LinkedInstalledAppFlow(InstalledAppFlow):
+                    class LinkedInstalledAppFlow(BoundedInstalledAppFlow):
                         def authorization_url(self, **kwargs):
                             url, state = super().authorization_url(**kwargs)
                             on_authorization_url(url)
@@ -156,6 +162,12 @@ class GmailAuth:
                     raise CredentialError(
                         "Google sign-in timed out. Click Connect Gmail again, then Continue to Google sign-in. "
                         "Finish in the new tab within three minutes and leave Eml open."
+                    ) from exc
+                except RequestTimeout as exc:
+                    LOGGER.warning("Gmail token exchange timed out; no automatic retry was performed.")
+                    raise CredentialError(
+                        "Google approval may have finished, but the Gmail token exchange timed out. "
+                        "Check the connection, then click Connect Gmail again to start a fresh sign-in."
                     ) from exc
                 except Exception as exc:
                     if _dns_failure(exc):

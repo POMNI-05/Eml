@@ -1,12 +1,13 @@
 """Optional cloud workflow; existing local AI and email selection stay intact."""
 
+import html
 import json
 import os
 
 import streamlit as st
 
 from eml_core.gemini import GeminiClient
-from invoice.exchange import CloudPackage, ExchangeStore
+from invoice.exchange import CloudPackage, ExchangeStore, cloud_copy_prompt
 from invoice.service import DraftStore
 from invoice.templates import GenerationTemplateStore
 
@@ -14,31 +15,80 @@ from invoice.templates import GenerationTemplateStore
 def generation_settings(store, client_id):
     templates = GenerationTemplateStore(store)
     saved = templates.get(client_id)
-    with st.expander("Client generation preferences"):
-        st.caption("Saved for this client across periods. These preferences do not prove that work was performed.")
-        with st.form(f"generation_preferences_{client_id}"):
-            local_only = st.checkbox(
-                "Keep this client's processing local", value=saved["local_only"],
-                key=f"client_local_only_{client_id}",
-            )
-            style = st.text_area(
-                "Output preferences", value=saved["style"], height=140,
-                key=f"client_output_style_{client_id}",
-            )
-            rules = st.text_area(
-                "Extra names to replace before cloud use", value=saved["privacy_rules"],
-                placeholder="ANZ => BANK\nExample Pty Ltd => ENTITY\n12 Example Street => ADDRESS",
-                help="One exact phrase => TYPE per line. Contacts, confirmed names, email addresses and common identifiers are also masked.",
-                key=f"client_privacy_rules_{client_id}",
-            )
-            if st.form_submit_button("Save generation preferences"):
-                try:
-                    templates.save(client_id, style=style, privacy_rules=rules, local_only=local_only)
-                    st.rerun()
-                except ValueError as exc:
-                    st.error(str(exc))
-        st.caption("Name replacement is reversible pseudonymisation. Distinctive business facts can still identify a client.")
+    st.subheader("Writing preferences")
+    st.caption("Example: Review of bank reconciliations for July–September 2026.")
+    style = st.text_area(
+        "Output preferences", value=saved["style"], height=240,
+        key=f"client_output_style_{client_id}",
+    )
+    st.markdown("**Extra names to replace before cloud use**")
+    st.caption("ANZ → BANK · Leave unused rows blank.")
+    rules_key = f"client_privacy_rows_{client_id}"
+    if rules_key not in st.session_state:
+        count = len(saved["privacy_rules"].splitlines())
+        st.session_state[rules_key] = max(3, count)
+    existing = [line.rsplit("=>", 1) for line in saved["privacy_rules"].splitlines() if line.strip()]
+    left, right = st.columns(2)
+    left.markdown("Original")
+    right.markdown("Replace with")
+    rows = []
+    for index in range(st.session_state[rules_key]):
+        original, replacement = existing[index] if index < len(existing) else ("", "")
+        left, right = st.columns(2)
+        source = left.text_input(
+            f"Original {index + 1}", value=original.strip(), label_visibility="collapsed",
+            placeholder="Original name", key=f"privacy_original_{client_id}_{index}",
+        )
+        target = right.text_input(
+            f"Replace with {index + 1}", value=replacement.strip(), label_visibility="collapsed",
+            placeholder="BANK / ENTITY / ADDRESS", key=f"privacy_replacement_{client_id}_{index}",
+        )
+        rows.append((source.strip(), target.strip()))
+    if st.button("＋", key=f"privacy_add_{client_id}", help="Add a replacement row",
+                 disabled=st.session_state[rules_key] >= 300):
+        st.session_state[rules_key] += 1
+        st.rerun()
+    local_only = st.checkbox(
+        "Keep this client's processing local", value=saved["local_only"],
+        key=f"client_local_only_{client_id}",
+    )
+    if st.button("Save generation preferences", key=f"save_generation_{client_id}"):
+        if any(bool(source) != bool(target) for source, target in rows):
+            st.error("Fill both cells in each used row, or leave both blank.")
+        else:
+            rules = "\n".join(f"{source} => {target}" for source, target in rows if source and target)
+            try:
+                templates.save(client_id, style=style, privacy_rules=rules, local_only=local_only)
+                st.rerun()
+            except ValueError as exc:
+                st.error(str(exc))
+    st.caption("Use letters and underscores for replacement labels. Names are restored locally; other details may still identify a client.")
     return saved
+
+
+def _copy_prompt_button(prompt, *, disabled):
+    """Copy only the reviewed, masked request; keep clipboard work in the browser."""
+    payload = html.escape(prompt, quote=True)
+    st.iframe(
+        f"""<textarea id="prompt" style="position:fixed;left:-9999px" aria-hidden="true">{payload}</textarea>
+<button id="copy" {'disabled' if disabled else ''} style="font:14px sans-serif;padding:10px 16px;
+ border:1px solid #ccc;border-radius:8px;background:white;cursor:pointer">Copy prompt + emails for GPT</button>
+<span id="status" role="status" style="font:13px sans-serif;margin-left:8px"></span>
+<script>
+document.getElementById('copy').addEventListener('click', async () => {{
+ const text = document.getElementById('prompt');
+ const status = document.getElementById('status');
+ try {{
+   try {{ await navigator.clipboard.writeText(text.value); }}
+   catch (_) {{
+     text.focus(); text.select();
+     if (!document.execCommand('copy')) throw new Error('Clipboard unavailable');
+   }}
+   status.textContent = 'Copied — paste into GPT.';
+ }} catch (_) {{ status.textContent = 'Use the download button to get the request.'; }}
+}});
+</script>""", height=55,
+    )
 
 
 def pending_cloud_panel(store, client_id, settings):
@@ -76,6 +126,12 @@ def pending_cloud_panel(store, client_id, settings):
             disabled=settings["local_only"],
         )
         ready = reviewed and not settings["local_only"]
+        _copy_prompt_button(cloud_copy_prompt(package.request), disabled=not ready)
+        st.download_button(
+            "Download prompt + emails", cloud_copy_prompt(package.request),
+            file_name="gpt_prompt.txt", mime="text/plain", disabled=not ready,
+            key=f"prompt_download_{selected}",
+        )
         st.download_button(
             "Download masked request for an approved cloud service",
             json.dumps(package.request, ensure_ascii=False, indent=2),
@@ -128,11 +184,10 @@ def pending_cloud_panel(store, client_id, settings):
 
 def prepare_cloud_panel(store, client_id, payload, settings):
     if settings["local_only"]:
-        st.info("Cloud preparation is off for this client. Change and save Client generation preferences to enable it.")
+        st.info("Cloud preparation is off for this client. Uncheck “Keep this client's processing local” above and save to enable it.")
         return
-    st.write("Prepare a masked snapshot, inspect it, then download it or send it to Gemini.")
-    st.caption("No model is needed for preparation. Keep only the emails and background needed for this work record.")
-    if st.button("Prepare cloud evidence package", type="primary"):
+    st.caption("Bundle the instructions and selected emails into one masked prompt for GPT.")
+    if st.button("Prepare prompt + emails for GPT", type="primary"):
         try:
             package = CloudPackage.prepare(
                 payload, privacy_rules=settings["privacy_rules"], local_only=settings["local_only"],

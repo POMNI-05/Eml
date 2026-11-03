@@ -192,6 +192,10 @@ def client_search_panel(context, search_store=None, account_id=""):
     state_key = f"client_search_state_{context['client_id']}"
     widget_prefix = f"client_search_{context['client_id']}_"
     state = st.session_state.get(state_key, {"terms": defaults})
+    previous_defaults = state.get("defaults", defaults)
+    if defaults != previous_defaults and state.get("terms", []) == previous_defaults:
+        state = {**state, "terms": defaults}
+        st.session_state[widget_prefix + "find"] = defaults
     terms = st.multiselect(
         "Find", list(dict.fromkeys(defaults + state.get("terms", []))),
         default=state.get("terms", defaults), accept_new_options=True,
@@ -245,7 +249,7 @@ def client_search_panel(context, search_store=None, account_id=""):
             })
             st.success("Search method saved for this client.")
     st.session_state[state_key] = {
-        "terms": terms, "match": match, "match_mode": "all" if match == choices[1] else "any", "excluded": excluded,
+        "defaults": defaults, "terms": terms, "match": match, "match_mode": "all" if match == choices[1] else "any", "excluded": excluded,
         "prefix": prefix, "hide_prefix": hide_prefix, "exclusion_area": exclusion_area,
     }
     try:
@@ -376,7 +380,7 @@ def generation_panel(store, client_id, model_client, language):
     background = BackgroundStore(store)
     key = f"work_draft_{client_id}"
     st.subheader("Prepare, review and export")
-    st.caption("Build a work record from your selected emails. Check the source before confirming each activity.")
+    st.caption("Turn selected emails into billing descriptions, then review and export.")
     settings = generation_settings(store, client_id)
     pending_cloud_panel(store, client_id, settings)
     saved = drafts.list(client_id)
@@ -413,37 +417,43 @@ def generation_panel(store, client_id, model_client, language):
     selected_ids = st.session_state.get("workspace_selected_ids", [])
     if result is None or not selected_ids:
         if not cloud_draft:
-            st.info("Choose a client's folders, open them, then use the relevant emails to prepare a draft.")
+            st.info("Find emails for this client, then select the ones to include.")
         return
-    has_draft = bool(st.session_state.get(f"work_draft_{client_id}"))
-    with st.expander("Draft inputs", expanded=not has_draft, key=f"draft_inputs_{client_id}_{has_draft}"):
+    st.subheader("Emails to include")
+    with st.container():
         docs = background.list(client_id)
         by_id = {doc.document_id: doc for doc in docs}
         doc_ids = st.multiselect(
             "Background documents sent to AI", list(by_id), default=list(by_id),
             format_func=lambda value: by_id[value].filename,
             key=f"generation_documents_{client_id}",
-        )
+        ) if by_id else []
         chosen_docs = [by_id[value] for value in doc_ids]
         context = store.context(client_id)
         payload, _ = build_inputs(
             context, chosen_docs, result, selected_ids, language, style_instructions=settings["style"]
         )
+        summary = [f"{len(selected_ids)} selected emails"]
+        if chosen_docs:
+            summary.append(f"{len(chosen_docs)} background documents")
+        if context["confirmed_facts"]:
+            summary.append(f"{len(context['confirmed_facts'])} confirmed client details")
+        st.caption(" · ".join(summary))
         if payload["selection_scope"]["attachment_warnings"]:
-            st.warning("Some attachments were only partly read or could not be read. Check their notices in the email reading pane.")
-        for column, label, value in zip(
-            st.columns(3), ["Selected emails", "Background documents", "Confirmed details"],
-            [len(selected_ids), len(chosen_docs), len(context["confirmed_facts"])],
-        ):
-            column.metric(label, value)
-        st.download_button(
-            "Download original evidence for local backup", json.dumps(payload, ensure_ascii=False, indent=2),
-            file_name="ai_evidence_package.json", mime="application/json",
-        )
-        st.caption("This original backup contains client information. Use the masked cloud package for approved cloud processing.")
+            st.warning("Some attachment content is unavailable. Only readable content will be used; check the email preview for details.")
+        with st.popover("Download evidence backup"):
+            st.caption("Original client data — keep this file locally.")
+            st.download_button(
+                "Download original evidence for local backup", json.dumps(payload, ensure_ascii=False, indent=2),
+                file_name="ai_evidence_package.json", mime="application/json",
+            )
     if not result.complete:
         st.warning("The mailbox fetch is incomplete; the draft will cover only the selected evidence.")
-    route = st.radio("Generation method", ["Local Ollama", "Cloud JSON / Gemini"], horizontal=True)
+    route = st.radio(
+        "Create the draft", ["Local Ollama", "Cloud JSON / Gemini"], index=1, horizontal=True,
+        format_func=lambda value: {"Local Ollama": "On this computer", "Cloud JSON / Gemini": "Use GPT or Gemini"}[value],
+        captions=["Uses your local Ollama model.", "Replaces names before cloud use."],
+    )
     if route == "Cloud JSON / Gemini":
         prepare_cloud_panel(store, client_id, payload, settings)
         return

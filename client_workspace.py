@@ -8,8 +8,9 @@ import hashlib
 import json
 import os
 from dataclasses import asdict
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 import streamlit as st
 
@@ -173,6 +174,7 @@ with ProfileStore(DB_PATH) as store:
                     st.markdown("### Email source")
                     mode = st.radio(
                         "Email source", list(EMAIL_SOURCE_EXAMPLES),
+                        index=list(EMAIL_SOURCE_EXAMPLES).index("Client search"),
                         captions=list(EMAIL_SOURCE_EXAMPLES.values()), label_visibility="collapsed",
                     )
                     if mode == "Client folders (IMAP)":
@@ -264,9 +266,12 @@ with ProfileStore(DB_PATH) as store:
                     use_dates = st.checkbox("Filter by date", value=True)
                     start = end = None
                     if use_dates:
+                        today = datetime.now(ZoneInfo("Australia/Sydney")).date()
+                        # Calendar months, including when the range crosses a year.
+                        start_year, start_month = divmod(today.year * 12 + today.month - 1 - 4, 12)
                         left, right = st.columns(2)
-                        start = left.date_input("From", value=date.today().replace(day=1))
-                        end = right.date_input("Through", value=date.today())
+                        start = left.date_input("From", value=date(start_year, start_month + 1, 1))
+                        end = right.date_input("Through", value=today)
                         st.caption("Includes both dates in Australia/Sydney time.")
                     cap = st.checkbox("Limit the number of messages", value=True)
                     limit = int(st.number_input("Message limit", min_value=1, value=50)) if cap else None

@@ -12,9 +12,9 @@ from eml_core.attachments import EmailAttachment
 from eml_core.documents import BackgroundStore, DocumentPart
 from eml_core.gemini import GeminiClient
 from eml_core.privacy import Pseudonymizer, parse_literal_rules
-from invoice.exchange import CloudPackage, ExchangeResponse, ExchangeStore
+from invoice.exchange import CloudPackage, ExchangeResponse, ExchangeStore, cloud_copy_prompt
 from invoice.service import DraftStore, build_inputs
-from invoice.templates import GenerationTemplateStore
+from invoice.templates import DEFAULT_STYLE, LEGACY_STYLE, GenerationTemplateStore
 
 
 class PrivacyTests(unittest.TestCase):
@@ -88,6 +88,17 @@ class ExchangeTests(unittest.TestCase):
 
     def package(self):
         return CloudPackage.prepare(self.inputs, privacy_rules="ANZ => BANK", local_only=False)
+
+    def test_copy_prompt_contains_only_masked_request_and_return_instructions(self):
+        package = self.package()
+        prompt = cloud_copy_prompt(package.request)
+        instructions, payload = prompt.split("\n\n", 1)
+        self.assertEqual(json.loads(payload), package.request)
+        self.assertIn("cloud_response.json", instructions)
+        self.assertIn("response_schema", instructions)
+        self.assertIn("No Markdown fences", instructions)
+        for original in ("Example Pty Ltd", "ANZ", "alex@client.example", "private-gmail-id", "AUDIT-ONLY-MARKER"):
+            self.assertNotIn(original, prompt)
 
     def reply(self, package, attachment=False):
         message = package.request["input"]["evidence"]["selected_email_evidence"][0]
@@ -197,12 +208,23 @@ class ExchangeTests(unittest.TestCase):
         with self.assertRaisesRegex(ModelError, "exceeds"):
             CloudPackage.prepare(inputs, local_only=False)
 
+    def test_unchanged_legacy_prompts_refresh_but_custom_wording_is_preserved(self):
+        templates = GenerationTemplateStore(self.store)
+        for style in (LEGACY_STYLE, LEGACY_STYLE.replace("Do not invent", "Use plain language. Do not invent")):
+            templates.save(self.cid, style=style, privacy_rules="ANZ => BANK", local_only=False)
+            saved = templates.get(self.cid)
+            self.assertEqual(saved["style"], DEFAULT_STYLE)
+            self.assertEqual(saved["privacy_rules"], "ANZ => BANK")
+            self.assertFalse(saved["local_only"])
+        templates.save(self.cid, style="My firm's preferred style", privacy_rules="", local_only=True)
+        self.assertEqual(templates.get(self.cid)["style"], "My firm's preferred style")
+
     def test_generation_templates_do_not_overwrite_profiles_and_are_client_scoped(self):
         templates = GenerationTemplateStore(self.store)
-        self.assertTrue(templates.get(self.cid)["local_only"])
+        self.assertFalse(templates.get(self.cid)["local_only"])
         templates.save(self.cid, style="Concise", privacy_rules="ANZ => BANK", local_only=False)
         self.assertFalse(templates.get(self.cid)["local_only"])
-        self.assertTrue(templates.get(self.other)["local_only"])
+        self.assertFalse(templates.get(self.other)["local_only"])
         self.assertEqual(self.store.context(self.cid)["confirmed_facts"], self.context["confirmed_facts"])
 
 
