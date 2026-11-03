@@ -13,8 +13,8 @@ from eml_core.auth import GmailAuth, SCOPES
 # -----------------------------
 # Gmail authentication
 # -----------------------------
-def get_gmail_service():
-    return GmailAuth().get_service()
+def get_gmail_service(*, on_authorization_url=None):
+    return GmailAuth().get_service(on_authorization_url=on_authorization_url)
 
 def find_gmail_message_by_rfc822_id(service, internet_message_id: str):
     internet_message_id = str(internet_message_id or "").strip()

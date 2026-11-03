@@ -1,4 +1,5 @@
 # the code run applescript, to receive metadata and turn it into python data / or json ? ?
+# KEY RULEEEE: Inside Python, prefer Python-native data; At system boundaries, serialize it.
 ## TODO: remember to add this line to add.py, so that the script can be run from the command line:
 
 import subprocess
@@ -59,7 +60,7 @@ def get_selected_outlook_email():
         received_at,
         folder_name,
     ) = parts
-    
+
     # then returned as a dictionary
     return {
         "message_id": message_id,

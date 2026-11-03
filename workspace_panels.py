@@ -88,9 +88,14 @@ def connection_panel(root: Path, get_service, clear_selection, *, compact=False)
 
     st.caption("Open your saved mailbox or sign in with Google to get started.")
     if st.button("Connect Gmail", type="primary", use_container_width=True):
+        sign_in_prompt = st.empty()
+        def show_authorization_url(url):
+            with sign_in_prompt.container():
+                st.info("Open Google sign-in below in a new tab. Complete approval within three minutes and leave this Eml tab open.")
+                st.link_button("Continue to Google sign-in", url, type="primary")
         try:
-            with st.spinner("Complete Google sign-in in your browser…"):
-                account = GmailMailbox(get_service()).account_id()
+            with st.spinner("Waiting for Google sign-in. Use the button below if approval is needed…"):
+                account = GmailMailbox(get_service(on_authorization_url=show_authorization_url)).account_id()
             if st.session_state.get("workspace_account") != account:
                 _clear_account(clear_selection)
             st.session_state["workspace_account"] = account
@@ -98,6 +103,8 @@ def connection_panel(root: Path, get_service, clear_selection, *, compact=False)
             st.rerun()
         except Exception as exc:
             st.error(str(exc))
+        finally:
+            sign_in_prompt.empty()
     st.caption("Read-only access. Email is loaded only when you choose folders and open them.")
     with st.expander("Connection help") if compact else st.popover("Connection help"):
         st.caption("Complete sign-in on this computer. For a test app, add your Gmail address to Google's test users.")
@@ -367,6 +374,7 @@ def _draft_downloads(draft, edits=None, reviewed=False, reviewer="", prefix="cur
 def generation_panel(store, client_id, model_client, language):
     drafts = DraftStore(store)
     background = BackgroundStore(store)
+    key = f"work_draft_{client_id}"
     st.subheader("Prepare, review and export")
     st.caption("Build a work record from your selected emails. Check the source before confirming each activity.")
     settings = generation_settings(store, client_id)
@@ -381,6 +389,9 @@ def generation_panel(store, client_id, model_client, language):
             )
             if st.button("Open saved draft"):
                 st.session_state[f"open_saved_draft_{client_id}"] = chosen_draft
+                previous = drafts.get(client_id, chosen_draft)
+                if previous.get("generation"):
+                    st.session_state[key] = previous
             if st.session_state.get(f"open_saved_draft_{client_id}") == chosen_draft:
                 previous = drafts.get(client_id, chosen_draft)
                 st.caption("This is the saved evidence snapshot, independent of the current selection.")
@@ -393,10 +404,16 @@ def generation_panel(store, client_id, model_client, language):
                 except (ValueError, TypeError, KeyError) as exc:
                     st.error("This saved draft contains invalid activity edits: " + str(exc))
 
+    draft = st.session_state.get(key)
+    cloud_draft = bool(draft and draft.get("generation"))
+    if cloud_draft:
+        st.caption("Reviewing the saved cloud evidence snapshot. Current email selections do not change this draft.")
+        _draft_review(drafts, client_id, draft)
     result = st.session_state.get("workspace_result")
     selected_ids = st.session_state.get("workspace_selected_ids", [])
     if result is None or not selected_ids:
-        st.info("Choose a client's folders, open them, then use the relevant emails to prepare a draft.")
+        if not cloud_draft:
+            st.info("Choose a client's folders, open them, then use the relevant emails to prepare a draft.")
         return
     has_draft = bool(st.session_state.get(f"work_draft_{client_id}"))
     with st.expander("Draft inputs", expanded=not has_draft, key=f"draft_inputs_{client_id}_{has_draft}"):
@@ -427,13 +444,9 @@ def generation_panel(store, client_id, model_client, language):
     if not result.complete:
         st.warning("The mailbox fetch is incomplete; the draft will cover only the selected evidence.")
     route = st.radio("Generation method", ["Local Ollama", "Cloud JSON / Gemini"], horizontal=True)
-    key = f"work_draft_{client_id}"
     if route == "Cloud JSON / Gemini":
         prepare_cloud_panel(store, client_id, payload, settings)
-        draft = st.session_state.get(key)
-        if not draft or not draft.get("generation"):
-            return
-        signature = input_digest(payload, draft["model"], 0)
+        return
     elif model_client is None:
         st.info("Open Gmail connected → Local AI setup to choose a model for the draft.")
         return
@@ -452,11 +465,15 @@ def generation_panel(store, client_id, model_client, language):
         except Exception as exc:
             st.error(str(exc))
     draft = st.session_state.get(key)
-    if not draft:
+    if not draft or draft.get("generation"):
         return
     if draft["input_digest"] != signature:
         st.info("The emails, background, profile or model changed. Generate a fresh draft for these inputs.")
         return
+    _draft_review(drafts, client_id, draft)
+
+
+def _draft_review(drafts, client_id, draft):
     with st.container(border=True):
         st.markdown("#### Client & work summary")
         st.write(draft["analysis"]["client_summary"])
@@ -520,5 +537,5 @@ def generation_panel(store, client_id, model_client, language):
         except (ValueError, TypeError, KeyError) as exc:
             st.error("Check the edited activity fields before saving: " + str(exc))
         else:
-            st.session_state[key] = revised
+            st.session_state[f"work_draft_{client_id}"] = revised
             st.rerun()

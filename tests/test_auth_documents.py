@@ -1,9 +1,12 @@
 import io
 import json
 import os
+import socket
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import Mock, patch
+from urllib.parse import parse_qs, urlparse
 
 from eml_core.auth import GmailAuth, CredentialError, validate_credentials
 from eml_core.documents import BackgroundStore, DocumentError, extract_document, explicit_document_candidates
@@ -61,6 +64,105 @@ class CredentialTests(unittest.TestCase):
         self.auth.disconnect()
         self.assertTrue(self.auth.credentials_path.exists())
         self.assertFalse(self.auth.token_path.exists())
+
+    def test_sign_in_link_is_delivered_without_launching_a_browser_or_logging_secrets(self):
+        self.auth.save_credentials(credential_bytes())
+        credentials = Mock()
+        credentials.to_json.return_value = '{"token":"synthetic-private-token"}'
+        links = []
+        def sign_in(flow, **kwargs):
+            flow.redirect_uri = "http://localhost:43210/"
+            flow.authorization_url()
+            return credentials
+        with patch("google_auth_oauthlib.flow.InstalledAppFlow.run_local_server", autospec=True, side_effect=sign_in) as run_server, \
+                patch("googleapiclient.discovery.build") as build, \
+                patch("webbrowser.get") as browser:
+            service = self.auth.get_service(on_authorization_url=links.append)
+        self.assertIs(service, build.return_value)
+        browser.assert_not_called()
+        options = run_server.call_args.kwargs
+        self.assertFalse(options["open_browser"])
+        self.assertIsNone(options["authorization_prompt_message"])
+        self.assertEqual(options["bind_addr"], "127.0.0.1")
+        self.assertEqual(options["timeout_seconds"], 180)
+        self.assertIn("Return to Eml", options["success_message"])
+        self.assertEqual(len(links), 1)
+        parsed = urlparse(links[0])
+        self.assertEqual(parsed.netloc, "accounts.google.com")
+        self.assertEqual(parse_qs(parsed.query)["redirect_uri"], ["http://localhost:43210/"])
+        self.assertNotIn("test-only", links[0])
+        self.assertTrue(self.auth.token_path.exists())
+        self.assertEqual(os.stat(self.auth.token_path).st_mode & 0o777, 0o600)
+
+    def test_sign_in_timeout_has_actionable_feedback_and_safe_logs(self):
+        from google_auth_oauthlib.flow import WSGITimeoutError
+        self.auth.save_credentials(credential_bytes())
+        with patch("google_auth_oauthlib.flow.InstalledAppFlow.run_local_server", side_effect=WSGITimeoutError("synthetic-secret")), \
+                self.assertLogs("eml_core.auth", level="WARNING") as logs, \
+                self.assertRaises(CredentialError) as caught:
+            self.auth.get_service(on_authorization_url=Mock())
+        self.assertIn("Continue to Google sign-in", str(caught.exception))
+        self.assertNotIn("synthetic-secret", str(caught.exception))
+        self.assertNotIn("synthetic-secret", " ".join(logs.output))
+        self.assertFalse(self.auth.token_path.exists())
+
+    def test_refresh_failures_log_the_error_type_without_credentials(self):
+        self.auth.token_path.write_text("{}")
+        credentials = Mock(valid=False, expired=True, refresh_token="synthetic-refresh-token")
+        credentials.refresh.side_effect = RuntimeError("synthetic-secret")
+        with patch("google.oauth2.credentials.Credentials.from_authorized_user_file", return_value=credentials), \
+                self.assertLogs("eml_core.auth", level="WARNING") as logs, \
+                self.assertRaises(CredentialError) as caught:
+            self.auth.get_service()
+        self.assertIn("RuntimeError", " ".join(logs.output))
+        self.assertNotIn("synthetic-secret", " ".join(logs.output))
+        self.assertNotIn("synthetic-refresh-token", " ".join(logs.output))
+        self.assertIn("could not refresh", str(caught.exception))
+
+    def test_legacy_callers_can_still_open_the_browser(self):
+        self.auth.save_credentials(credential_bytes())
+        with patch("google_auth_oauthlib.flow.InstalledAppFlow.from_client_secrets_file") as factory, \
+                patch("googleapiclient.discovery.build"):
+            factory.return_value.run_local_server.return_value.to_json.return_value = "{}"
+            self.auth.get_service()
+        self.assertTrue(factory.return_value.run_local_server.call_args.kwargs["open_browser"])
+
+    def test_google_token_exchange_dns_failure_has_specific_feedback_without_secrets(self):
+        from requests.exceptions import ConnectionError
+        self.auth.save_credentials(credential_bytes())
+        failure = ConnectionError("synthetic-private-code")
+        failure.__cause__ = socket.gaierror(socket.EAI_NONAME, "synthetic-private-host")
+        with patch("google_auth_oauthlib.flow.InstalledAppFlow.run_local_server", side_effect=failure), \
+                self.assertLogs("eml_core.auth", level="WARNING") as logs, \
+                self.assertRaises(CredentialError) as caught:
+            self.auth.get_service(on_authorization_url=Mock())
+        self.assertIn("DNS lookup failed", str(caught.exception))
+        self.assertIn("dns_resolution_failed", " ".join(logs.output))
+        self.assertNotIn("synthetic-private", str(caught.exception) + " ".join(logs.output))
+        self.assertFalse(self.auth.token_path.exists())
+
+    def test_google_refresh_dns_failure_is_detected_inside_nested_transport_errors(self):
+        from google.auth.exceptions import TransportError
+        from requests.exceptions import ConnectionError
+        self.auth.token_path.write_text("{}")
+        failure = TransportError(ConnectionError(socket.gaierror(socket.EAI_NONAME, "synthetic-private-host")))
+        credentials = Mock(valid=False, expired=True, refresh_token="synthetic-refresh-token")
+        credentials.refresh.side_effect = failure
+        with patch("google.oauth2.credentials.Credentials.from_authorized_user_file", return_value=credentials), \
+                self.assertLogs("eml_core.auth", level="WARNING") as logs, \
+                self.assertRaises(CredentialError) as caught:
+            self.auth.get_service()
+        self.assertIn("DNS lookup failed", str(caught.exception))
+        self.assertIn("dns_resolution_failed", " ".join(logs.output))
+        self.assertNotIn("synthetic-private", str(caught.exception) + " ".join(logs.output))
+
+    def test_shared_gmail_entrypoint_forwards_the_sign_in_link_callback(self):
+        from fetch_emails import get_gmail_service
+        callback = Mock()
+        with patch("fetch_emails.GmailAuth") as auth:
+            service = get_gmail_service(on_authorization_url=callback)
+        auth.return_value.get_service.assert_called_once_with(on_authorization_url=callback)
+        self.assertIs(service, auth.return_value.get_service.return_value)
 
 
 class BackgroundTests(unittest.TestCase):

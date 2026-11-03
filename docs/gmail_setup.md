@@ -55,6 +55,14 @@
   [Google refresh token 说明](https://developers.google.com/identity/protocols/oauth2)。
 - **浏览器授权无法返回**：在运行 App 的同一台电脑完成授权。本版使用本机 localhost 回调，
   尚未改造成托管网站的多用户 OAuth 服务。
+- **点击 Connect Gmail 后一直等待，没有打开 Google**：点击页面内的
+  **Continue to Google sign-in**，在新标签页完成授权；保留 Eml 标签页，三分钟内完成。
+  页面内链接不依赖 Python/macOS 自动打开浏览器，因此也可用于自动打开浏览器失败的情况。
+  超时后重新点击 Connect Gmail 获取新链接；不要使用旧日志中的链接。
+- **Google 页面已完成，但 Eml 提示 DNS lookup failed**：浏览器收到 Google 回调不代表
+  Python 已换取 Gmail token。运行 Eml 的电脑仍须能解析并连接
+  `oauth2.googleapis.com`，之后还须访问 Gmail API。检查该电脑的网络、DNS、VPN 或代理配置；
+  不要关闭证书校验，也不必仅为这个网络错误反复更换 OAuth 文件。
 
 此教程依据 [Google Gmail Python quickstart](https://developers.google.com/workspace/gmail/api/quickstart/python)
 和 [OAuth consent 配置说明](https://developers.google.com/workspace/guides/configure-oauth-consent)。

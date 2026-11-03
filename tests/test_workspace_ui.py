@@ -422,6 +422,40 @@ class WorkspaceTests(unittest.TestCase):
         self.assertTrue(any(item.label == "Client" for item in app.selectbox))
         self.assertFalse(any(item.label == "Client group" for item in app.selectbox))
 
+    def test_google_sign_in_link_is_rendered_without_requiring_a_browser_launcher(self):
+        import streamlit as st
+        auth_dir = Path(os.environ["EML_AUTH_DIR"])
+        auth_dir.mkdir()
+        (auth_dir / "credentials.json").write_text("{}")
+        url = "https://accounts.google.com/o/oauth2/auth?state=synthetic-state"
+        def connect(*, on_authorization_url):
+            on_authorization_url(url)
+            return self.api
+        self.get_service.side_effect = connect
+        app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
+        with patch("workspace_panels.st.link_button", wraps=st.link_button) as link:
+            element(app.button, "Connect Gmail").click().run()
+        self.assertFalse(app.exception)
+        link.assert_called_once_with("Continue to Google sign-in", url, type="primary")
+        self.assertEqual(app.session_state["workspace_account"], self.api.account)
+        self.assertFalse(any(name.startswith("messages.") for name, _ in self.api.calls))
+
+    def test_google_sign_in_timeout_clears_the_expired_link_and_shows_retry_guidance(self):
+        from eml_core.auth import CredentialError
+        auth_dir = Path(os.environ["EML_AUTH_DIR"])
+        auth_dir.mkdir()
+        (auth_dir / "credentials.json").write_text("{}")
+        def connect(*, on_authorization_url):
+            on_authorization_url("https://accounts.google.com/o/oauth2/auth?state=synthetic-state")
+            raise CredentialError("Google sign-in timed out. Click Connect Gmail again.")
+        self.get_service.side_effect = connect
+        app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
+        element(app.button, "Connect Gmail").click().run()
+        self.assertFalse(app.exception)
+        self.assertTrue(any("timed out" in message.value for message in app.error))
+        self.assertFalse(any(item.proto.label == "Continue to Google sign-in" for item in app.get("link_button")))
+        self.assertFalse(self.api.calls)
+
     def test_disconnecting_hides_client_workflow_and_clears_old_email_scope(self):
         app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
         self.create(app, "Alex")
@@ -588,10 +622,43 @@ class WorkspaceTests(unittest.TestCase):
                 element(app.button, "Restore and save response").click().run()
             self.assertFalse(app.exception)
             self.assertIn("ANZ", app.session_state[f"work_draft_{cid}"]["analysis"]["activities"][0]["description"])
+            self.assertFalse(element(app.button, "Save edited draft").disabled)
+            edited = [{
+                "Item": 1, "Include": True, "Entity": "",
+                "Description": "Reviewed the ANZ reconciliation", "Status": "completed", "Reviewer note": "Checked",
+            }]
+            original_editor = st.data_editor
+            def edit_activities(data, **kwargs):
+                if str(kwargs.get("key", "")).startswith("activities_"):
+                    return edited
+                return original_editor(data, **kwargs)
+            with patch("workspace_panels.st.data_editor", side_effect=edit_activities):
+                element(app.text_input, "Reviewer name").set_value("Cloud reviewer").run()
+                element(
+                    app.checkbox, "I have checked the included activities against the email evidence"
+                ).set_value(True).run()
+                element(app.button, "Save edited draft").click().run()
+            self.assertFalse(app.exception)
+            revised = app.session_state[f"work_draft_{cid}"]
+            self.assertTrue(revised["reviewed"])
+            self.assertEqual(revised["review_edits"], edited)
+            self.assertEqual(revised["reviewer"], "Cloud reviewer")
+            app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
+            self.connect(app)
+            element(app.selectbox, "Client").set_value(cid).run()
+            element(app.selectbox, "Saved draft").set_value(revised["draft_id"]).run()
             element(app.button, "Open saved draft").click().run()
+            self.assertFalse(app.exception)
+            self.assertFalse(element(app.button, "Save edited draft").disabled)
+            self.assertTrue(element(
+                app.checkbox, "I have checked the included activities against the email evidence"
+            ).value)
+            self.assertEqual(app.session_state[f"work_draft_{cid}"]["review_edits"], edited)
+            with self.assertRaises(KeyError):
+                app.session_state["workspace_result"]
             self.assertTrue(any(d.proto.label == "Download Word record" for d in app.get("download_button")))
             with ProfileStore(os.environ["EML_PROFILE_DB"]) as profiles:
-                self.assertEqual(len(DraftStore(profiles).list(cid)), 1)
+                self.assertEqual(len(DraftStore(profiles).list(cid)), 2)
             self.create(app, "Another group")
             self.assertFalse(any(item.label == "Evidence package" for item in app.selectbox))
             cloud_model.assert_not_called()
