@@ -1,7 +1,7 @@
 # Eml：本地运行、可选云模型与可逆假名化
 
-研究与代码核对日期：2026-11-03（Australia/Sydney）。本轮基于 `main` 的
-`f26e55c6cb74395bf3efecbf75dd42254ebdb42b`，分支为 `codex/local-cloud-billing`。
+研究与代码核对日期：2026-11-03（Australia/Sydney）。该实现最初基于 `main` 的
+`f26e55c` 开发，现已合入 `main`；本说明于 2026-11-09 对照 `b89a560` 更新状态。
 
 ## 结论与适用场景
 

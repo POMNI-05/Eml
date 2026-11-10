@@ -1,174 +1,119 @@
-# Eml · Email-to-Work-Draft Assistant
+﻿# Eml · From client emails to professional work records
 
-A Python-based internal workspace for turning selected client correspondence into
-source-backed professional work drafts. Invoice preparation is the first use case:
-identify proposed work activities, review their evidence, and export an editable
-work record for preparing invoice descriptions.
+Turn selected client correspondence into a detailed, evidence-backed work-record
+draft for professional review.
 
-The mailbox is hosted on **Google Workspace Gmail**, which remains the
-authoritative email source. The primary workflow runs in the web workspace.
-**Legacy Outlook for Mac** selection is an optional alternative entry point.
+The workflow below defines the target product experience. Screenshots show the
+current prototype.
 
-## Current Workflow
+- **Local privacy controls** — detect common identifiers, refine masking rules
+  and review the pseudonymised package before cloud drafting; keep original files
+  and recovery mappings on device.
+- **Professional service descriptions** — organise the work, adjustments and
+  deliverables into a billing-style draft with supporting sources.
+- **Reviewer control** — edit wording, inclusion and work status before final use.
 
-~~~text
-Web workspace: client + optional dates + relevant email selection
-    ↓
-Gmail API
-    ↓
-Exact selected messages + reusable client background
-    ↓
-Structured evidence package
-    ↓
-Local AI work-record draft with source quotations and open questions
-    ↓
-Human review, corrections, and Word / JSON export
-~~~
+## Product workflow
 
-The Streamlit workspace calls shared Python services directly. The existing
-FastAPI bridge remains available for Outlook integration.
+[![Eml workflow: select client emails, pseudonymise and package evidence locally, draft with optional AI, restore identifiers locally, then review a professional work record](docs/assets/eml-professional-workflow.png)](docs/assets/eml-professional-workflow.png)
 
-## Optional local launcher and cloud generation
+[Open the full-size workflow](docs/assets/eml-professional-workflow.png).
+Synthetic illustration of the intended workflow, not a live model result or an
+application screenshot. The example amounts and proposed adjustments are fictional.
 
-The `codex/local-cloud-billing` extension adds Mac/Windows setup and launch
-shortcuts, per-client output preferences, locally mapped pseudonymised JSON
-exchange, and an optional Gemini REST adapter. Local Ollama remains available;
-preparing a cloud package does not require a local model. Cloud processing is
-off by default for each client. This extension builds on `main` at `f26e55c`
-and preserves its folders, search, attachment extraction and review workflow.
+1. **Connect and select** — choose the client, period and relevant emails and attachments.
+2. **Detect and mask locally** — identify names, companies and contact details;
+   add rules for project names, amounts and other sensitive content.
+3. **Review the outgoing package** — inspect replacements and keep the recovery
+   mapping on device.
+4. **Draft and restore** — use cloud AI as the primary drafting route, with the
+   pseudonymised evidence and professional writing rules; restore identifiers locally.
+5. **Review and finalise** — confirm each service, its supporting evidence and
+   review status, then export a professional Word or PDF work record.
 
-See [local installation and operation](docs/local_install.md) and
-[research, architecture and data boundaries](docs/local_cloud_architecture.md).
-GitHub Pages cannot host the existing Python backend; the launcher runs it on
-the user's computer, independently of the developer's laptop. A cloud API call
-is a separate, explicit choice. The generated output is still a reviewable work
-record; it does not calculate fees or issue an invoice.
+## Inside the workspace
 
-## Run the workspace
+These screenshots show the **actual Streamlit interface**, using a fictional
+client, synthetic emails and a scripted model response.
 
-The workspace shares the existing read-only Gmail OAuth login. Client profiles,
-background documents and draft snapshots are saved locally in an ignored SQLite
-database.
+### Review the draft and its evidence
 
-From the repository directory, with Python 3.11 or later:
+Check proposed services alongside supporting quotations, edit the record and
+export an editable Word document with a JSON source snapshot.
 
-~~~bash
-python -m venv .venv
-source .venv/bin/activate
+![Draft and export interface with service descriptions, source quotations, reviewer confirmation and export controls](docs/assets/screenshots/03-draft-export.png)
+
+### Choose the client and period
+
+Set the client, reporting period and correspondence source.
+
+![Client and scope selection with a fictional client, October dates and a selected Gmail folder](docs/assets/screenshots/01-client-scope.png)
+
+### Keep only relevant correspondence
+
+Inspect emails and attachments, exclude irrelevant messages and retain the
+selected evidence for drafting.
+
+![Email review interface with an excluded newsletter and a selected source email with an attachment](docs/assets/screenshots/02-email-review.png)
+
+The interface walkthrough uses **Northstar Imports**, a separate synthetic case
+from the workflow illustration. [Reproduce these captures](docs/portfolio_capture.md).
+
+## Why I built it
+
+Preparing service records meant assembling evidence scattered across emails,
+replies and attachments, then translating it into professional billing language.
+Eml brings selection, local privacy preparation, source-linked drafting and review
+into one workspace. Previous invoice wording can guide style; current
+correspondence must support the work described.
+
+<details>
+<summary>Compact workflow</summary>
+
+![Compact Eml workflow: local evidence preparation, identifier replacement, optional cloud drafting, local restoration and professional review](docs/assets/eml-workflow.svg)
+
+</details>
+
+<details>
+<summary>Privacy and professional review</summary>
+
+- Pseudonymisation reduces exposure; it does not guarantee anonymity. The reviewer
+  checks the outgoing package, including identifying business context.
+- Source references support review; they do not establish that work was completed
+  or is billable. Professional judgement stays with the reviewer.
+- Eml prepares work-record drafts. It does not infer hours or fees, issue invoices,
+  or provide tax or legal advice.
+
+[Architecture and data boundaries](docs/local_cloud_architecture.md)
+
+</details>
+
+## Try the synthetic walkthrough
+
+Install the requirements and launch the isolated demo:
+
+```bash
 python -m pip install -r requirements.txt
-streamlit run client_workspace.py
-~~~
+python -m streamlit run helpers/portfolio_demo.py --server.address 127.0.0.1 --server.port 8517 --server.headless true
+```
 
-The opening screen focuses on Gmail sign-in, with the following steps on the
-right. If no credentials or saved sign-in exist, upload a Google Desktop app
-JSON file once. Existing credentials.json and token.json are reused without
-showing the upload form again. See [Gmail setup](docs/gmail_setup.md).
+Select the **Northstar** folder, review the correspondence, then choose
+**On this computer → Generate work record draft**. The demo uses a temporary
+database and scripted responses; no Gmail sign-in or model server is needed.
 
-After connecting, Gmail and local AI controls collapse into the green
-**Gmail connected** status pill. The full-width workspace shows email sources
-and examples on the left, with independent **Period & scope** and
-**Client background** cards on the right. Background notes are saved per client
-and reused across date ranges. Open the status pill to manage the account or model.
+For the working application, follow the [local installation guide](docs/local_install.md)
+and [Gmail setup](docs/gmail_setup.md).
 
-For a personal `@gmail.com` account, follow [Test with your own Gmail](docs/gmail_testing.md).
-The first-time upload includes setup help. Start with a few familiar messages; the
-workspace starts with the client's Gmail folders, the current month and a
-50-message limit. Full folder paths are shown, with subfolders included only
-when chosen. Folder choices are saved per client and mailbox using Gmail label
-IDs, so a renamed folder can still be recognised.
+## Built with
 
-1. Connect Gmail, then choose a **Client** or use **Client management → Add client**.
-   An existing clients.json can also be imported.
-2. In **Client & folders**, load folders, choose the client's paths and optional
-   subfolders, and click **Open selected folders →** to load mail and advance.
-3. In **Review emails**, read correspondence beside the checkbox list, exclude
-   irrelevant messages, and click **Use selected emails →** to continue.
-4. In **Draft & export**, choose relevant background documents, download an AI
-   evidence package or generate a local-model work-record draft.
-5. Check the quoted emails beside the draft, correct descriptions and status, and exclude
-   unsupported items. Save a reviewed snapshot and export Word or JSON.
+Python · Streamlit · Gmail read-only API · SQLite · local attachment extraction ·
+structured model exchange.
 
-Client details and documents are available from the **Client background** card. Client
-search, Outlook selection and Internet Message-IDs remain alternative sources.
-Client search accepts separate names, email addresses or phrases, with **Match ANY
-of those written** or **Match ALL of those written** matching. **Exclusion filters** adds exclusions and subject
-prefixes without requiring Gmail query syntax. **Leave out from** lets you choose
-Anywhere, Sender fields, To/Cc fields, Subject only or Body only. Saved search entries can be removed;
-they are not silently added back. Subject prefixes are checked locally before
-counting the message limit.
-Saved searches are stored in the local user profile per client and Gmail account.
-They are included as client background metadata when preparing a draft, so the
-draft records how the correspondence was found without treating the search
-criteria as proof that work was performed.
-Changing the client, folders, search filters or date scope clears the previous email selection
-and returns the workflow to the first step.
+The Streamlit workspace calls shared Python services directly. An optional
+Outlook bridge is available as a separate entry point.
 
-The structured evidence package contains the client profile, selected documents,
-selected email content and source IDs, and selection scope. The AI proposes work
-activities and gaps from that evidence; a request for work does not establish
-completion. Hours and fees are entered separately. Other professional document
-types are future extensions.
-
-Email attachments are read locally when mail is fetched: searchable PDF, DOCX,
-TXT, Markdown, CSV and XLSX. Stage 2 shows extracted text and unread/partial-file
-notices in the reading pane. Only attachments belonging to included emails enter
-the draft. Citations retain the Gmail message ID, attachment part ID and page,
-block or sheet/row location; quotations are checked against that exact source.
-Excel formulas are preserved rather than calculated. Files over 20 MB, combined
-attachments over 50 MB per fetch, unsupported files and files requiring OCR are
-flagged, not silently treated as read. Re-fetch existing email sets to load attachments.
-
-In stage 2, **Sender** groups messages by email address. Choose a sender and use
-**Select sender** or **Exclude sender**, or choose **All senders** for **Select all**
-and **Exclude all**. Other senders' individual checkbox choices are preserved.
-
-Outlook-selected messages and pasted Internet Message-IDs are also supported.
-Confirmed profiles can be exported for use with the original app.py.
-
-The local rule extractor provides simple suggestions without a model. The
-integrated Ollama connection can interpret client background documents and
-generate structured work-record drafts from chosen email evidence. Documents
-support TXT, Markdown, DOCX, and searchable PDF. Confirmed document-derived
-contacts, companies and aliases participate in Client search; the full selected
-background also accompanies draft generation. See [Local AI setup](docs/ollama_setup.md).
-
-| File | Responsibility |
-| --- | --- |
-| eml_core/mailbox.py | Exact label/message/conversation selection, pagination, union/deduplication, Sydney dates, MIME text |
-| eml_core/folders.py | Client folder preferences isolated by mailbox, retaining Gmail IDs and full paths |
-| eml_core/profiles.py | Evidence-backed suggestions, review, persistence, incremental extraction, legacy import/export |
-| outlook_adapter.py | Original single-message adapter and added multi-message adapter |
-| outlook_trigger_multi.applescript | Read selected Internet Message-IDs in scriptable Mac Outlook |
-| helpers/inspect_outlook_dictionary.py | Inspect folder terms in the actual installed scripting dictionary |
-| client_workspace.py | Primary Streamlit workspace using the shared modules |
-| workspace_panels.py | Credential upload, local AI, background documents and draft review panels |
-| eml_core/documents.py | Client-scoped source documents, text extraction and quoted locations |
-| eml_core/ai.py | Local Ollama structured output and background analysis |
-| eml_core/search.py | Search terms and match explanations from confirmed client context |
-| invoice/service.py | Scope-validated background-aware work drafts and saved snapshots |
-| invoice/renderer.py | Editable Word records with email evidence appendix |
-
-**Scope:** Gmail labels are supported directly. Outlook-local and Smart Folders
-are not automatically mapped to Gmail labels. The added AppleScript must be
-tested on the actual Outlook Mac. This is not an Office.js add-in or a completed
-billing application. It generates reviewable work-record drafts, without
-inferring hours or fees.
-
-## Offline demo and tests
-
-~~~bash
-python -m eml_core.demo
-python -m pip install -r requirements-dev.txt
-python -m unittest discover -s tests -v
-~~~
-
-Tests use mocked Gmail and model responses, including a local HTTP test server.
-The document tests use python-docx, pypdf and ReportLab. They do not contact
-real Gmail, Outlook or an Ollama model.
-See [中文设计说明与复用示例](docs/client_context.md).
-
-The original app.py still provides Gmail search, conversation review and
-TXT/JSON export. The original FastAPI bridge currently returns metadata.
-Work-record generation, source validation and Word export are connected in the
-new workspace. Issuing invoices, fee calculations, image/scanned-file OCR,
-multi-document chunk summarisation and a native Office.js add-in are not included.
+- [Workspace user guide](docs/workspace_guide.md)
+- [Local installation](docs/local_install.md)
+- [Architecture and data boundaries](docs/local_cloud_architecture.md)
+- [Gmail setup](docs/gmail_setup.md)
+- [Demo and screenshot reproduction](docs/portfolio_capture.md)

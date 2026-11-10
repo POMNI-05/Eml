@@ -29,7 +29,7 @@ password. Keep this file on your computer; you do not need to paste it into chat
    and grant read-only access. Return here and check the connected email address.
 2. After connecting, click **Client management**, enter **My Gmail test** and click
    **Add client**, or choose an existing **Client**.
-3. Label a few messages **Eml test** in Gmail. In **1. Client & folders**, click
+3. Label a few messages **Eml test** in Gmail. In **1. Client & scope**, click
    **Load folders** and select that folder. For the boss's account, choose the
    same client folder paths shown under the Gmail account in Outlook.
 4. Choose whether to **Include subfolders** and adjust the date range to when

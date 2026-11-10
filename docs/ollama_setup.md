@@ -32,7 +32,7 @@ http://127.0.0.1:11434
    Word 表格和可搜索 PDF 的页码/位置会保留；扫描页不做 OCR。
 2. 点击 **Analyse documents with AI**，获得公司、联系人、关系、业务和服务范围候选。
 3. 在 **Client context** 核对引用并确认。未确认的解释不进入已确认客户档案。
-4. 默认在 **Client & folders** 选择客户对应的 Gmail/IMAP 同步文件夹。
+4. 默认在 **Client & scope** 选择客户对应的 Gmail/IMAP 同步文件夹。
    也可将 Email source 切换为 **Client search**，使用已确认公司名、联系人邮箱和别名检索。
    点击 **Open selected folders →** 或 **Find emails →**，进入邮件审核。
 5. 在 **Review emails** 勾选相关邮件，点击 **Use selected emails →**。

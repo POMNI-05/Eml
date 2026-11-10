@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="710" viewBox="0 0 1280 710" role="img" aria-labelledby="title desc">
+<title id="title">From Client Correspondence to Reviewable Work Records</title>
+<desc id="desc">Selected emails, replies and readable attachments form an evidence package. Before cloud use, identifiers are replaced locally and the outgoing package is reviewed. A copied prompt or Gemini request produces a draft; identifiers are restored and source quotes checked locally before human review and Word export. Local Ollama is an alternative. Historical invoice style is guidance, not current evidence.</desc>
+<defs><marker id="a" markerWidth="9" markerHeight="9" refX="8" refY="4" orient="auto"><path d="M0 0L8 4L0 8" fill="none" stroke="#42646a" stroke-width="1.5"/></marker>
+<style>text{font-family:Arial,sans-serif;fill:#183b40}.h{font-size:25px;font-weight:700}.t{font-size:19px;font-weight:700}.b{font-size:17px}.s{font-size:15px;fill:#4c656b}.k{font-size:13px;font-weight:700;letter-spacing:1.5px;fill:#176b57}.box{fill:white;stroke:#b8cec6;stroke-width:1.5}.line{fill:none;stroke:#42646a;stroke-width:2;marker-end:url(#a)}</style></defs>
+<rect width="1280" height="710" rx="20" fill="#f7faf8"/>
+<text x="40" y="48" class="k">EML / DESIGN RATIONALE</text>
+<text x="40" y="89" class="h">From Client Correspondence to Reviewable Work Records</text>
+<text x="40" y="120" class="b">Select once. Package the context. Review what leaves the computer.</text>
+<g transform="translate(0,-85)">
+<text x="40" y="265" class="k">01 / PREPARE LOCALLY</text>
+<rect x="40" y="283" width="265" height="172" rx="12" class="box"/>
+<text x="60" y="318" class="t">Select correspondence</text>
+<text x="60" y="352" class="b">Client + reporting period</text>
+<text x="60" y="383" class="b">Emails, replies, attachments</text>
+<text x="60" y="426" class="s">Review and exclude irrelevant mail</text>
+<path d="M305 369H339" class="line"/>
+<rect x="340" y="283" width="265" height="172" rx="12" class="box"/>
+<text x="360" y="318" class="t">Build evidence package</text>
+<text x="360" y="352" class="b">Readable text + source IDs</text>
+<text x="360" y="383" class="b">Client context + style rules</text>
+<text x="360" y="426" class="s">Keep the original snapshot locally</text>
+<path d="M605 369H639" class="line"/>
+<rect x="640" y="283" width="285" height="172" rx="12" fill="#e4f2eb" stroke="#176b57" stroke-width="2"/>
+<text x="660" y="318" class="t">Replace identifiers locally</text>
+<text x="660" y="352" class="b">Names, contacts, extra rules</text>
+<text x="660" y="383" class="b">Preview the outgoing package</text>
+<text x="660" y="426" class="s">Recovery mapping stays on device</text>
+<path d="M925 369H959" class="line"/>
+<rect x="960" y="283" width="280" height="172" rx="12" fill="#edf3fa" stroke="#6486ad" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="980" y="318" class="t">LLM draft · optional cloud</text>
+<text x="980" y="352" class="b">Copy prompt + evidence</text>
+<text x="980" y="383" class="b">or explicitly send to Gemini</text>
+<text x="980" y="426" class="s">Return structured activities + quotes</text>
+<text x="40" y="509" class="k">02 / RESTORE AND REVIEW LOCALLY</text>
+<rect x="40" y="529" width="360" height="121" rx="12" class="box"/>
+<text x="60" y="566" class="t">Restore &amp; validate sources</text>
+<text x="60" y="597" class="b">Restore identifiers; check source quotes</text>
+<text x="60" y="626" class="s">Matching text does not prove completion</text>
+<path d="M1100 455V485H380V528" class="line"/>
+<path d="M400 589H439" class="line"/>
+<rect x="440" y="529" width="390" height="121" rx="12" fill="#fff7e7" stroke="#bd9745"/>
+<text x="460" y="566" class="t">Human review alongside evidence</text>
+<text x="460" y="597" class="b">Edit descriptions, status and inclusion</text>
+<text x="460" y="626" class="s">Requested / in progress / completed</text>
+<path d="M830 589H869" class="line"/>
+<rect x="870" y="529" width="370" height="121" rx="12" class="box"/>
+<text x="890" y="566" class="t">Editable work record</text>
+<text x="890" y="597" class="b">Word export + JSON source snapshot</text>
+<text x="890" y="626" class="s">Review status recorded; no fee calculation</text>
+</g>
+<text x="40" y="610" class="s">Optional writing guidance: previous invoice wording informs style and grouping, not evidence of current work.</text>
+<text x="40" y="643" class="s">Alternative: generate with local Ollama from the evidence package, then validate and review on this computer.</text>
+<text x="40" y="676" class="s">Pseudonymisation reduces exposure; remaining business details can still identify a client. Review before cloud use.</text>
+</svg>
