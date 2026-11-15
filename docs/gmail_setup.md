@@ -1,24 +1,80 @@
 # 获取 Gmail 凭证并连接邮箱
 
-在实际使用的电脑上运行 Eml。这里连接的是 Google 托管的邮箱；
-日常使用 Outlook 不会改变邮箱服务商。
+本教程让新用户从零创建**自己管理的 Google Cloud 项目和 OAuth 客户端**，无需向 Eml 开发者索取凭证。
+个人 Gmail 与公司 Google Workspace 都可按各自权限配置；使用 Outlook 不会改变邮箱实际服务商。
+在实际使用 Eml 的电脑上操作。Google 密码只在 Google 登录页面输入，不交给 Eml。
 
-## 一次性获取凭证
+Eml 首次登录页有 **Create my Google credentials · 创建自己的凭证** 引导，支持中英文、逐步导航、
+Google 控制台链接和本教程下载。引导不替你注册 Google 项目，也不因点击“下一步”就认定设置成功。
+如果已经有适用的 Desktop OAuth JSON，可以直接上传，不必重建项目。
 
-1. 打开 [Google Cloud Console](https://console.cloud.google.com/)，登录用于管理项目的 Google 账户，
-   创建或选择一个项目。
-2. 在 API 库中找到 **Gmail API**，点击 **Enable**。
-3. 打开 **Google Auth platform → Branding**。首次配置时点击 **Get Started**，
-   填写应用名称，例如 Eml Local，以及支持邮箱和联系邮箱。
-4. 配置 **Audience**。如果只给同一 Workspace 组织使用且可选 Internal，可以使用 Internal。
-   其他测试情形选择 External，并在 Testing 状态下把实际要登录的邮箱加入 **Test users**。
-   在 **Data Access** 中使用本应用需要的 Gmail 只读范围 gmail.readonly。
-5. 打开 **Google Auth platform → Clients → Create Client**。
-   **Application type 必须选择 Desktop app**，填写一个名称并创建。
-6. 下载这个 OAuth 客户端的 JSON 文件。不是 API key，不是 service account JSON，
-   也不是 Google 账户密码。
+## 1. 创建自己的 Google Cloud 项目
 
-## 在 Eml 里上传
+1. 打开 [Create a Project](https://console.cloud.google.com/projectcreate)，用负责管理该项目的 Google 账号登录。
+2. 项目名可填写 **Eml Personal**。按账号情况选择组织/位置；个人账号没有公司组织不影响采用外部测试方式。
+3. 点击 **Create**，等待创建完成，然后在顶部项目选择器选中这个项目。
+4. 记住项目名/ID。后续 API、应用受众和客户端必须属于同一个项目。
+
+公司账号如果不能创建项目，需要管理员授予适当权限或协助创建。
+参考 [Google 创建项目说明](https://developers.google.com/workspace/guides/create-project)。
+
+## 2. 在该项目启用 Gmail API
+
+打开 [Gmail API 页面](https://console.cloud.google.com/apis/library/gmail.googleapis.com)，
+确认顶部是刚创建的项目，点击 **Enable / 启用**；已经启用则继续。
+此步骤是读取 Google 邮箱的接口配置，与 Gemini 模型 API key 无关。
+
+## 3. 设置应用信息、受众和测试用户
+
+打开 [Google Auth platform → Branding](https://console.cloud.google.com/auth/branding)。
+首次配置时点击 **Get Started**，应用名称填 **Eml Personal**，支持邮箱和联系邮箱填写自己可管理的邮箱。
+按实际用途填写并完成 Google 要求的确认。
+
+| 使用情况 | Audience 的选择 | 要添加的账号 |
+| --- | --- | --- |
+| 自己的个人 Gmail，或组织外测试账号 | **External**，保持 **Testing** | 在 Test users 添加实际要连接的完整邮箱 |
+| 只供同一公司 Workspace 组织内部使用 | 由管理员核对 **Internal** 是否适用 | 仅限该组织内用户，仍受公司访问策略限制 |
+
+个人测试：打开 [Audience](https://console.cloud.google.com/auth/audience)，找到 **Test users → Add users**，
+填入实际要登录的完整 Gmail 地址并保存。**即使你创建了项目，测试时也要添加自己的邮箱。**
+如果创建项目和读取邮件使用不同账号，应添加后者。这里不需要给邮箱用户项目 IAM 管理权限。
+Internal 项目不能给组织外的个人 Gmail 授权；公司邮箱后缀本身也不证明项目归属该公司组织。
+
+External + Testing 的 Gmail refresh token 通常七天后失效；到期后重新登录。
+这是适合验证的配置，长期公司交接另行核对 Internal 等适用方式，不能只切换 Production 就视为完成验证。
+参考 [受众配置](https://developers.google.com/workspace/guides/configure-oauth-consent)和
+[token 期限](https://developers.google.com/identity/protocols/oauth2)。
+
+## 4. 添加 Gmail 只读范围
+
+打开 [Data Access](https://console.cloud.google.com/auth/scopes) → **Add or Remove Scopes**，
+搜索 Gmail API 或在手动输入框添加以下范围，然后 **Update / Save**：
+
+```text
+https://www.googleapis.com/auth/gmail.readonly
+```
+
+这是当前 Eml 请求的邮箱权限。它允许查看邮件，但不授予发信或删信权限。
+如果列表中找不到 Gmail，回到第 2 步核对 API 是否在当前项目启用。
+参考 [Gmail scopes](https://developers.google.com/workspace/gmail/api/auth/scopes)。
+
+## 5. 创建 Desktop OAuth 客户端并下载 JSON
+
+1. 打开 [Clients](https://console.cloud.google.com/auth/clients) → **Create Client**。
+2. **Application type 选择 Desktop app**。名称可填 **Eml Windows** 或 **Eml Mac**；不同平台可分别管理客户端。
+3. 点击 **Create**，然后 **Download JSON**，把文件保存在本机。
+4. 下载文件可能叫 `client_secret_….json`，保留原名即可。
+
+Desktop 客户端无需手填网站地址或固定回调端口；如果页面要求这些，先核对是否误选了 Web application。
+下载的是 OAuth 客户端 JSON，不是 API key、service account 密钥或已有用户的 token。
+文件应包含 `installed` 配置，Eml 会检查文件类型和 Google 授权地址。
+参考 [Google 创建凭证说明](https://developers.google.com/workspace/guides/create-credentials)。
+
+## 6. 回到 Eml 上传并授权
+
+上传刚下载的文件后，Eml 才能发起你的 Gmail 登录。每个人的邮箱授权在各自电脑上生成，
+无需向开发者发送 JSON，也不要复制别人的 `token.json`。
+JSON 保存成功只代表格式检查通过；项目是否启用 API、账号是否被允许，需要下一步真实连接验证。
 
 1. 打开 Eml，首页左侧先显示 Gmail 登录，右侧是后续工作步骤。
 2. 把下载的文件拖入 **Drop Google credentials JSON here**。

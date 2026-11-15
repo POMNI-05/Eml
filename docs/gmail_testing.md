@@ -9,6 +9,10 @@ If Google app credentials or authorization are already saved, the opening screen
 shows **Connect Gmail** directly and hides the upload form.
 Otherwise:
 
+Open **Create my Google credentials · 创建自己的凭证** on the login screen. The six-step guide
+links to Google's project creation, Gmail API, audience, scope and Desktop client pages.
+Choose **中文** for the Chinese instructions, or use the [full self-setup guide](gmail_setup.md).
+
 1. Open [Google Cloud Console](https://console.cloud.google.com/) and create or
    choose a project. Enable **Gmail API** in its API Library.
 2. Open **Google Auth platform → Branding** and enter an app name and contact
@@ -68,14 +72,12 @@ An attachment is included in AI evidence only while its parent email is included
 
 ## 3. Try a draft
 
-In **3. Draft & export**, open **Draft inputs** to download the **AI evidence package**
-without setting up a model. To generate a draft in Eml, open the **Gmail connected**
-status pill, then **Local AI setup**,
-start Ollama on this computer, click **Load local models**, and choose an
-installed model. The [local AI guide](https://github.com/POMNI-05/Eml/blob/main/docs/ollama_setup.md)
-has setup details.
+In **3. Draft & export**, click **Prepare prompt + emails for GPT**, inspect the
+masked request and confirm it is allowed for cloud use. Copy or download the prompt,
+use an approved model, then upload its response JSON and click **Restore and save response**.
+This default workflow does not need Ollama or an API key. The Gemini API is an optional route.
 
-Generate the draft, compare activities with their quoted source emails, edit
+After restoring the draft, compare activities with their quoted source emails, edit
 descriptions and status, then save and export Word or JSON. Ordinary personal
 emails may produce no supported professional activity; that is a valid result.
 
