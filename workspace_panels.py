@@ -16,6 +16,7 @@ from invoice.service import DraftStore, build_inputs, generate_draft, input_dige
 from invoice.renderer import render_docx
 from workspace_ui import activity_sources
 from cloud_panels import generation_settings, pending_cloud_panel, prepare_cloud_panel
+from gmail_onboarding import setup_guide
 
 
 def _clear_account(clear_selection):
@@ -57,6 +58,7 @@ def connection_panel(root: Path, get_service, clear_selection, *, compact=False)
     st.markdown("## Connect your Gmail")
     if needs_file or replace_file:
         st.caption("Add your Google app file once. Then sign in to your mailbox.")
+        setup_guide(root, expanded=needs_file and not compact)
         uploaded = st.file_uploader(
             "Drop Google credentials JSON here", type=["json"], key="google_credentials_upload",
             help="Use the Desktop app OAuth JSON downloaded from Google Cloud.",
@@ -71,17 +73,6 @@ def connection_panel(root: Path, get_service, clear_selection, *, compact=False)
                 st.rerun()
             except ValueError as exc:
                 st.error(str(exc))
-        with st.expander("Where do I get this file?") if compact else st.popover("Where do I get this file?"):
-            st.markdown(
-                "1. Open [Google Cloud Console](https://console.cloud.google.com/) and enable **Gmail API**.\n"
-                "2. Configure the app audience and add your Gmail as a test user.\n"
-                "3. Create a **Desktop app** OAuth client and download its JSON file.\n\n"
-                "Upload that file here. Your Google password is entered only on Google's sign-in page."
-            )
-            with st.expander("完整教程 · 中文"):
-                tutorial = root / "docs" / "gmail_setup.md"
-                if tutorial.exists():
-                    st.markdown(tutorial.read_text(encoding="utf-8"))
         if replace_file and st.button("Cancel"):
             st.session_state.pop("gmail_replace_credentials", None)
             st.rerun()

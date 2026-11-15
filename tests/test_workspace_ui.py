@@ -356,6 +356,41 @@ class WorkspaceTests(unittest.TestCase):
         self.assertTrue(any("获取 Gmail 凭证" in item.value for item in app.markdown))
         self.get_service.assert_not_called()
 
+    def test_self_setup_guide_reaches_upload_without_contacting_google(self):
+        from unittest.mock import Mock
+        import streamlit as st
+        from tests.test_auth_documents import credential_bytes
+
+        app = AppTest.from_file(str(ROOT / "client_workspace.py"), default_timeout=15).run()
+        element(app.selectbox, "Guide language / 教程语言").set_value("中文").run()
+        self.assertEqual(element(app.selectbox, "Setup step / 设置步骤").value, 0)
+        self.assertTrue(element(app.button, "上一步").disabled)
+        for _ in range(5):
+            element(app.button, "下一步").click().run()
+            self.assertFalse(app.exception)
+        self.assertEqual(element(app.selectbox, "Setup step / 设置步骤").value, 5)
+        self.assertTrue(element(app.button, "下一步").disabled)
+        self.get_service.assert_not_called()
+        self.assertFalse((Path(os.environ["EML_AUTH_DIR"]) / "credentials.json").exists())
+
+        original_upload = st.file_uploader
+        upload = Mock()
+        upload.getvalue.return_value = credential_bytes()
+        def synthetic_upload(label, *args, **kwargs):
+            if label == "Drop Google credentials JSON here":
+                return upload
+            return original_upload(label, *args, **kwargs)
+        with patch("workspace_panels.st.file_uploader", side_effect=synthetic_upload):
+            app.run()
+            element(app.button, "Save and continue").click().run()
+        self.assertFalse(app.exception)
+        self.assertTrue((Path(os.environ["EML_AUTH_DIR"]) / "credentials.json").is_file())
+        self.assertFalse((Path(os.environ["EML_AUTH_DIR"]) / "token.json").exists())
+        self.assertTrue(any(button.label == "Connect Gmail" for button in app.button))
+        self.assertFalse(any(item.label == "Setup step / 设置步骤" for item in app.selectbox))
+        self.assertFalse(any("test-only" in item.value for item in app.markdown))
+        self.get_service.assert_not_called()
+
     def test_invalid_activity_edits_disable_saving_until_corrected(self):
         from eml_core import ProfileStore
         from invoice.service import DraftStore
