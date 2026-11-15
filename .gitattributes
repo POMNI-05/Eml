@@ -1,0 +1,2 @@
+# Mac double-click launchers must keep Unix line endings, including Windows checkouts.
+*.command text eol=lf

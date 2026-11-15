@@ -8,6 +8,7 @@ draft for professional review.
 reviewed cloud packages: copy to an approved LLM or use the optional Gemini API;
 Ollama is not required. See the [installation guide](docs/local_install.md) and
 [17 November handoff checks and hosting assessment](docs/handoff_2026-11-17.md).
+For Mac with Google Workspace, follow the [copy-and-paste quickstart](docs/mac_quickstart.md).
 The local-model alternative is preserved on [`optional/local-llm`](https://github.com/POMNI-05/Eml/tree/optional/local-llm).
 
 The workflow below defines the target product experience. Screenshots show the
