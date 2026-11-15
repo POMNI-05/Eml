@@ -35,19 +35,24 @@ STEPS = (
      "授权成功后，Eml 自动生成本机 `token.json`。先核对显示的邮箱再选信。保存 JSON 仅验证文件格式；API 是否启用及账号权限还要通过实际登录确认。"),
 )
 
+STEP_OPTIONS = tuple(f"{index + 1}. {item[0]} / {item[1]}" for index, item in enumerate(STEPS))
+
 
 def _move_step(delta):
-    st.session_state["gmail_setup_step"] = min(len(STEPS) - 1, max(0, st.session_state.get("gmail_setup_step", 0) + delta))
+    current = st.session_state.get("gmail_setup_step", STEP_OPTIONS[0])
+    index = STEP_OPTIONS.index(current) if current in STEP_OPTIONS else 0
+    st.session_state["gmail_setup_step"] = STEP_OPTIONS[min(len(STEPS) - 1, max(0, index + delta))]
 
 
 def setup_guide(root: Path, *, expanded=False):
     with st.expander("Create my Google credentials · 创建自己的凭证", expanded=expanded):
         language = st.selectbox("Guide language / 教程语言", ["English", "中文"], key="gmail_setup_language")
         chinese = language == "中文"
-        step = st.selectbox(
-            "Setup step / 设置步骤", list(range(len(STEPS))), key="gmail_setup_step",
-            format_func=lambda index: f"{index + 1}. {STEPS[index][1 if chinese else 0]}",
-        )
+        # Stable bilingual options survive browser reruns when language changes.
+        if st.session_state.get("gmail_setup_step", STEP_OPTIONS[0]) not in STEP_OPTIONS:
+            st.session_state["gmail_setup_step"] = STEP_OPTIONS[0]
+        choice = st.selectbox("Setup step / 设置步骤", STEP_OPTIONS, key="gmail_setup_step")
+        step = STEP_OPTIONS.index(choice)
         item = STEPS[step]
         st.caption("在 Google 页面由你完成设置；切换步骤不会创建项目或验证配置。" if chinese else
                    "Complete these settings on Google's pages. Step navigation does not create a project or verify its configuration.")
