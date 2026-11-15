@@ -360,16 +360,23 @@ class WorkspaceTests(unittest.TestCase):
         from unittest.mock import Mock
         import streamlit as st
         from tests.test_auth_documents import credential_bytes
+        from gmail_onboarding import STEP_OPTIONS
 
         app = AppTest.from_file(str(ROOT / "client_workspace.py"), default_timeout=15).run()
         element(app.selectbox, "Guide language / 教程语言").set_value("中文").run()
-        self.assertEqual(element(app.selectbox, "Setup step / 设置步骤").value, 0)
+        self.assertEqual(element(app.selectbox, "Setup step / 设置步骤").value, STEP_OPTIONS[0])
         self.assertTrue(element(app.button, "上一步").disabled)
         for _ in range(5):
             element(app.button, "下一步").click().run()
             self.assertFalse(app.exception)
-        self.assertEqual(element(app.selectbox, "Setup step / 设置步骤").value, 5)
+        self.assertEqual(element(app.selectbox, "Setup step / 设置步骤").value, STEP_OPTIONS[5])
         self.assertTrue(element(app.button, "下一步").disabled)
+        element(app.selectbox, "Guide language / 教程语言").set_value("English").run()
+        element(app.button, "Previous step").click().run()
+        self.assertEqual(element(app.selectbox, "Setup step / 设置步骤").value, STEP_OPTIONS[4])
+        element(app.selectbox, "Guide language / 教程语言").set_value("中文").run()
+        element(app.button, "下一步").click().run()
+        self.assertEqual(element(app.selectbox, "Setup step / 设置步骤").value, STEP_OPTIONS[5])
         self.get_service.assert_not_called()
         self.assertFalse((Path(os.environ["EML_AUTH_DIR"]) / "credentials.json").exists())
 
