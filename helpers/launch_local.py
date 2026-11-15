@@ -64,11 +64,11 @@ def migrate_project_data(env):
             target.chmod(0o600)
 
 
-def launch_command(port):
+def launch_command(port, entrypoint="client_workspace.py"):
     if not 1024 <= port <= 65535:
         raise ValueError("Choose a local port from 1024 to 65535.")
     return [
-        sys.executable, "-m", "streamlit", "run", str(ROOT / "client_workspace.py"),
+        sys.executable, "-m", "streamlit", "run", str(ROOT / entrypoint),
         "--server.address=127.0.0.1", f"--server.port={port}", "--server.headless=true",
         "--browser.gatherUsageStats=false", "--server.enableXsrfProtection=true",
     ]
@@ -96,6 +96,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data-dir", type=Path, default=default_data_directory())
     parser.add_argument("--port", type=int, default=8501)
+    parser.add_argument("--entrypoint", choices=["client_workspace.py", "helpers/windows_demo.py"], default="client_workspace.py")
     parser.add_argument("--migrate-from-project", action="store_true")
     parser.add_argument("--no-browser", action="store_true", help="Start without opening a browser (diagnostics).")
     parser.add_argument("--check", action="store_true", help="Check this launcher's data paths and Google connectivity without starting the app.")
@@ -105,7 +106,7 @@ def main():
     if os.name != "nt":
         os.umask(0o077)
     try:
-        command = launch_command(args.port)
+        command = launch_command(args.port, args.entrypoint)
         env = runtime_environment(args.data_dir)
         if args.check:
             return subprocess.call([

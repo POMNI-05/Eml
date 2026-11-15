@@ -3,6 +3,9 @@
 ## TODO: remember to add this line to add.py, so that the script can be run from the command line:
 
 import subprocess
+import json
+import re
+import sys
 from pathlib import Path
 
 # in Apple: use an assigned field-separator in email 'ASCII 31 = Unit Separator' 
@@ -79,6 +82,8 @@ def get_selected_outlook_message_ids():
     them with GmailMailbox.select(Selection(internet_message_ids=...)).
     Requires an on-device test against the installed Outlook dictionary.
     """
+    if sys.platform == "win32":
+        return _windows_selected_message_ids()
     script = Path(__file__).with_name("outlook_trigger_multi.applescript")
     try:
         result = subprocess.run(
@@ -96,3 +101,38 @@ def get_selected_outlook_message_ids():
     if not ids:
         raise OutlookSelectionError("Please select at least one Outlook email.")
     return ids
+
+
+def _windows_selected_message_ids():
+    """Read selection from an already running Classic Outlook, without pywin32."""
+    script = Path(__file__).with_name("helpers") / "outlook_selection_windows.ps1"
+    try:
+        result = subprocess.run(
+            ["powershell.exe", "-NoLogo", "-NoProfile", "-NonInteractive", "-Command", script.read_text(encoding="utf-8")],
+            capture_output=True, text=True, encoding="utf-8", timeout=60,
+            creationflags=subprocess.CREATE_NO_WINDOW,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        raise OutlookSelectionError("Could not read Windows Outlook. Open Classic Outlook, or use Gmail folders/search.") from None
+    try:
+        payload = json.loads(result.stdout.lstrip("\ufeff"))
+    except (ValueError, TypeError):
+        raise OutlookSelectionError("Outlook did not return a readable selection. Use Classic Outlook or Gmail folders/search.") from None
+    messages = {
+        "unavailable": "Open Classic Outlook with the same Windows user and permission level, then select emails. New Outlook is not supported; use Gmail folders/search.",
+        "empty": "Select at least one individual email in the Classic Outlook message list.",
+        "too_many": "Select at most 500 Outlook emails at once.",
+        "not_mail": "The selection includes a non-email item. Select individual emails only.",
+        "missing_id": "A selected email has no Internet Message-ID. No partial selection was used; use Gmail folders/search.",
+    }
+    if not isinstance(payload, dict) or result.returncode or "error" in payload:
+        code = payload.get("error") if isinstance(payload, dict) else None
+        raise OutlookSelectionError(messages.get(code, "Could not read the Outlook selection. Use Gmail folders/search."))
+    ids = payload.get("ids")
+    if not isinstance(ids, list) or not 1 <= len(ids) <= 500 or any(
+        not isinstance(value, str) or len(value) > 998 or value.startswith("<") != value.endswith(">")
+        or not re.fullmatch(r'<?[^\s<>"{}]+@[^\s<>"{}]+>?', value)
+        for value in ids
+    ):
+        raise OutlookSelectionError("Outlook returned invalid message identifiers. No emails were fetched.")
+    return list(dict.fromkeys(ids))

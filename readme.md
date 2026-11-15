@@ -1,5 +1,9 @@
 ﻿# Eml · From client emails to professional work records
 
+**Windows isolated trial branch:** start with [START-HERE-WINDOWS.md](START-HERE-WINDOWS.md).
+Run `Setup.cmd` once, then `Try-Demo.cmd` for synthetic data or
+`Launch-Windows-Test.cmd` for your own Gmail account. This branch uses separate test data and ports.
+
 Turn selected client correspondence into a detailed, evidence-backed work-record
 draft for professional review.
 

@@ -256,8 +256,8 @@ with ProfileStore(DB_PATH) as store:
                         internet_ids = [line.strip() for line in text.splitlines() if line.strip()]
                     else:
                         st.caption(
-                            "Select messages in Legacy Outlook, then fetch. "
-                            "The Mac AppleScript connection needs testing on that Outlook installation."
+                            "Select individual messages in Classic Outlook (Windows) or Legacy Outlook (Mac), then fetch. "
+                            "New Outlook for Windows is not supported. You can always use Gmail folders or Client search."
                         )
 
                 with period_col, st.container(border=True, key="period_scope_panel"):
@@ -304,7 +304,7 @@ with ProfileStore(DB_PATH) as store:
                     if st.button(fetch_label, type="primary", disabled=not ready):
                         clear_selection()
                         try:
-                            if mode == "Outlook selection (Mac)":
+                            if mode.startswith("Outlook selection"):
                                 internet_ids = get_selected_outlook_message_ids()
                             selection = Selection(
                                 label_ids=tuple(label_ids) if mode == "Client folders (IMAP)" else (),

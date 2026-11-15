@@ -5,6 +5,7 @@ from datetime import datetime
 from email.utils import parseaddr, parsedate_to_datetime
 from html import escape
 from pathlib import Path
+import sys
 from zoneinfo import ZoneInfo
 
 import streamlit as st
@@ -19,8 +20,8 @@ EMAIL_SOURCE_EXAMPLES = {
         "Find mail using a client name or email address. "
         "Example: search for `alex@example.com` or `Example Pty Ltd`."
     ),
-    "Outlook selection (Mac)": (
-        "Start with messages selected in Legacy Outlook for Mac. "
+    ("Outlook selection (Windows)" if sys.platform == "win32" else "Outlook selection (Mac)"): (
+        "Start with messages selected in Classic Outlook for Windows or Legacy Outlook for Mac. "
         "Example: select three client emails there, then open them here."
     ),
     "Internet Message-IDs": (

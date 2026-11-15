@@ -10,6 +10,11 @@ from outlook_adapter import (
 
 
 class OutlookHelperTests(unittest.TestCase):
+    def setUp(self):
+        platform = patch("outlook_adapter.sys.platform", "darwin")
+        platform.start()
+        self.addCleanup(platform.stop)
+
     @patch("outlook_adapter.subprocess.run")
     def test_empty_folder_field_is_preserved(self, run):
         run.return_value = subprocess.CompletedProcess(

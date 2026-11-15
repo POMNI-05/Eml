@@ -5,5 +5,5 @@ if not exist ".venv\Scripts\python.exe" (
   pause
   exit /b 1
 )
-".venv\Scripts\python.exe" helpers\launch_local.py
+".venv\Scripts\python.exe" helpers\windows_trial.py launch
 if errorlevel 1 pause
