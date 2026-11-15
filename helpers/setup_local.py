@@ -14,7 +14,10 @@ def main():
     python = directory / ("Scripts/python.exe" if sys.platform == "win32" else "bin/python")
     if not python.exists():
         venv.EnvBuilder(with_pip=True).create(directory)
-    subprocess.check_call([str(python), "-m", "pip", "install", "-r", str(root / "requirements.txt")])
+    subprocess.check_call([
+        str(python), "-m", "pip", "install", "-r", str(root / "requirements.txt"),
+        "-c", str(root / "constraints-handoff.txt"),
+    ])
     print("Setup complete. Launch.command (Mac) or Launch.cmd (Windows) opens Eml on this computer.")
 
 

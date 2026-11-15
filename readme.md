@@ -3,6 +3,13 @@
 Turn selected client correspondence into a detailed, evidence-backed work-record
 draft for professional review.
 
+**Local handoff:** run `Setup.cmd` once and `Launch.cmd` when needed on Windows
+(macOS: `Setup.command` / `Launch.command`). The main workspace now defaults to
+reviewed cloud packages: copy to an approved LLM or use the optional Gemini API;
+Ollama is not required. See the [installation guide](docs/local_install.md) and
+[17 November handoff checks and hosting assessment](docs/handoff_2026-11-17.md).
+The local-model alternative is preserved on [`optional/local-llm`](https://github.com/POMNI-05/Eml/tree/optional/local-llm).
+
 The workflow below defines the target product experience. Screenshots show the
 current prototype.
 
@@ -100,6 +107,8 @@ python -m streamlit run helpers/portfolio_demo.py --server.address 127.0.0.1 --s
 Select the **Northstar** folder, review the correspondence, then choose
 **On this computer → Generate work record draft**. The demo uses a temporary
 database and scripted responses; no Gmail sign-in or model server is needed.
+This capture demo deliberately enables the older local-generation controls;
+the regular launcher uses the cloud-package workflow described above.
 
 For the working application, follow the [local installation guide](docs/local_install.md)
 and [Gmail setup](docs/gmail_setup.md).

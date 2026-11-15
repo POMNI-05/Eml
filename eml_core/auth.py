@@ -96,7 +96,7 @@ class GmailAuth:
         changed = True
         if self.credentials_path.exists():
             try:
-                old = json.loads(self.credentials_path.read_text())["installed"]
+                old = json.loads(self.credentials_path.read_text(encoding="utf-8"))["installed"]
                 changed = any(old.get(k) != new.get(k) for k in ("client_id", "client_secret"))
             except (ValueError, KeyError, TypeError):
                 pass

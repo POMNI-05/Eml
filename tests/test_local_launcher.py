@@ -1,4 +1,5 @@
 import os
+from contextlib import closing
 from pathlib import Path
 import sqlite3
 import tempfile
@@ -26,13 +27,14 @@ class LocalLauncherTests(unittest.TestCase):
             root, destination = Path(temp) / "checkout", Path(temp) / "persist"
             (root / "data").mkdir(parents=True)
             (root / "credentials.json").write_text('{"synthetic": true}')
-            with sqlite3.connect(root / "data" / "client_profiles.sqlite3") as db:
+            with closing(sqlite3.connect(root / "data" / "client_profiles.sqlite3")) as db:
                 db.execute("CREATE TABLE example(value TEXT)")
                 db.execute("INSERT INTO example VALUES ('old-profile')")
+                db.commit()
             with patch.dict(os.environ, {}, clear=True), patch("helpers.launch_local.ROOT", root):
                 env = runtime_environment(destination)
                 migrate_project_data(env)
-                with sqlite3.connect(env["EML_PROFILE_DB"]) as db:
+                with closing(sqlite3.connect(env["EML_PROFILE_DB"])) as db:
                     self.assertEqual(db.execute("SELECT value FROM example").fetchone()[0], "old-profile")
                 (Path(env["EML_AUTH_DIR"]) / "credentials.json").write_text("existing-secret")
                 with self.assertRaises(ValueError):

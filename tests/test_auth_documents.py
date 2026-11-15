@@ -32,7 +32,8 @@ class CredentialTests(unittest.TestCase):
 
     def test_desktop_upload_is_saved_privately_without_echoing_secrets(self):
         self.auth.save_credentials(credential_bytes())
-        self.assertEqual(os.stat(self.auth.credentials_path).st_mode & 0o777, 0o600)
+        if os.name != "nt":  # Windows access control is ACL-based, not POSIX mode bits.
+            self.assertEqual(os.stat(self.auth.credentials_path).st_mode & 0o777, 0o600)
         self.assertEqual(self.auth.status(), {
             "credentials_present": True, "authorization_present": False,
         })
@@ -92,7 +93,8 @@ class CredentialTests(unittest.TestCase):
         self.assertEqual(parse_qs(parsed.query)["redirect_uri"], ["http://localhost:43210/"])
         self.assertNotIn("test-only", links[0])
         self.assertTrue(self.auth.token_path.exists())
-        self.assertEqual(os.stat(self.auth.token_path).st_mode & 0o777, 0o600)
+        if os.name != "nt":
+            self.assertEqual(os.stat(self.auth.token_path).st_mode & 0o777, 0o600)
 
     def test_sign_in_timeout_has_actionable_feedback_and_safe_logs(self):
         from google_auth_oauthlib.flow import WSGITimeoutError

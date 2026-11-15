@@ -28,7 +28,7 @@
    用 **Client management → Add client** 添加客户，或直接选择已有客户。
 
 如果本机已有 credentials.json 或 token.json，首页直接显示登录按钮，不再显示上传区域。
-连接后，账户和本地 AI 设置收起在顶部 **Gmail connected** 状态按钮内。
+连接后，账户和草稿语言设置收起在顶部 **Gmail connected** 状态按钮内。
 需要更换配置时，可在 Connection help 或 Gmail connected 中主动选择更换 Google app file。
 
 | 本机文件 | 用途 |
@@ -38,7 +38,9 @@
 | clients.json | 可选的旧版客户清单，与 Google 登录无关 |
 | data/client_profiles.sqlite3 | 客户档案、背景文件、来源和草稿记录 |
 
-凭证和 token 默认保存在项目根目录，也可用 EML_AUTH_DIR 指定目录。
+使用 Launch 启动时，凭证和 token 保存在系统用户数据目录的 `auth/` 下，客户数据库也独立于代码目录；
+具体位置见[本地安装说明](local_install.md)。上表的项目相对路径仅适用于直接运行旧的 Streamlit 命令。
+`EML_AUTH_DIR` 可显式指定凭证目录。
 程序不显示文件中的 secret 或 token。更换为不同客户端配置时，需要重新授权。
 **Gmail connected → Disconnect Gmail** 只删除本机 token，不撤销 Google 账户后台已授予的权限。
 

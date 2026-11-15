@@ -12,6 +12,7 @@ from unittest.mock import patch
 import streamlit as st
 
 ROOT = Path(__file__).resolve().parents[1]
+os.environ["EML_ENABLE_LOCAL_LLM"] = "1"  # Scripted legacy-layout demonstration only.
 sys.path.insert(0, str(ROOT))
 from eml_core import ProfileStore
 from invoice.templates import GenerationTemplateStore

@@ -4,6 +4,7 @@ Use .venv/bin/python helpers/launch_local.py --help for options.
 """
 
 import argparse
+from contextlib import closing
 import importlib.util
 import os
 from pathlib import Path
@@ -54,7 +55,7 @@ def migrate_project_data(env):
             continue
         target.parent.mkdir(parents=True, exist_ok=True, mode=0o700)
         if source == source_db:
-            with sqlite3.connect(source) as original, sqlite3.connect(target) as destination:
+            with closing(sqlite3.connect(source)) as original, closing(sqlite3.connect(target)) as destination:
                 original.backup(destination)
         else:
             with target.open("xb") as stream:
@@ -96,6 +97,8 @@ def main():
     parser.add_argument("--data-dir", type=Path, default=default_data_directory())
     parser.add_argument("--port", type=int, default=8501)
     parser.add_argument("--migrate-from-project", action="store_true")
+    parser.add_argument("--no-browser", action="store_true", help="Start without opening a browser (diagnostics).")
+    parser.add_argument("--check", action="store_true", help="Check this launcher's data paths and Google connectivity without starting the app.")
     args = parser.parse_args()
     if not importlib.util.find_spec("streamlit"):
         parser.error("Run Setup.command or Setup.cmd once before launching.")
@@ -104,6 +107,12 @@ def main():
     try:
         command = launch_command(args.port)
         env = runtime_environment(args.data_dir)
+        if args.check:
+            return subprocess.call([
+                sys.executable, str(ROOT / "helpers" / "check_runtime.py"),
+                "--auth-dir", env["EML_AUTH_DIR"], "--database", env["EML_PROFILE_DB"],
+                "--port", str(args.port),
+            ], cwd=ROOT, env=env)
         if args.migrate_from_project:
             migrate_project_data(env)
         with socket.socket() as check:
@@ -114,7 +123,8 @@ def main():
     print(f"Local client database: {env['EML_PROFILE_DB']}", flush=True)
     print("Keep this window open while using Eml. Ctrl+C stops the local app.", flush=True)
     stopped = threading.Event()
-    threading.Thread(target=_open_when_ready, args=(args.port, stopped), daemon=True).start()
+    if not args.no_browser:
+        threading.Thread(target=_open_when_ready, args=(args.port, stopped), daemon=True).start()
     try:
         return subprocess.call(command, cwd=ROOT, env=env)
     except KeyboardInterrupt:

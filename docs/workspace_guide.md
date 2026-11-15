@@ -6,7 +6,12 @@ The workspace shares the existing read-only Gmail OAuth login. Client profiles,
 background documents and draft snapshots are saved locally in an ignored SQLite
 database.
 
-From the repository directory, with Python 3.11 or later:
+For daily use, install Python 3.11 or later, run `Setup.cmd` once and open
+`Launch.cmd` on Windows; use `Setup.command` / `Launch.command` on macOS.
+See [local installation and persistent data](local_install.md). The launcher
+stores profiles outside the checkout and does not update code on startup.
+
+For development only (this uses the older checkout-local data defaults):
 
 ~~~bash
 python -m venv .venv
@@ -20,11 +25,11 @@ right. If no credentials or saved sign-in exist, upload a Google Desktop app
 JSON file once. Existing credentials.json and token.json are reused without
 showing the upload form again. See [Gmail setup](gmail_setup.md).
 
-After connecting, Gmail and local AI controls collapse into the green
+After connecting, Gmail and draft-language controls collapse into the green
 **Gmail connected** status pill. The full-width workspace shows email sources
 and examples on the left, with independent **Period & scope** and
 **Client background** cards on the right. Background notes are saved per client
-and reused across date ranges. Open the status pill to manage the account or model.
+and reused across date ranges. Open the status pill to manage the account or language.
 
 For a personal `@gmail.com` account, follow [Test with your own Gmail](gmail_testing.md).
 The first-time upload includes setup help. Start with a few familiar messages; the
@@ -40,8 +45,10 @@ IDs, so a renamed folder can still be recognised.
    **Open selected folders →** to load mail and advance.
 3. In **Review emails**, read correspondence beside the checkbox list, exclude
    irrelevant messages, and click **Use selected emails →** to continue.
-4. In **Draft & export**, choose relevant background documents, download an AI
-   evidence package or generate a local-model work-record draft.
+4. In **Draft & export**, choose relevant background documents and prepare a
+   masked prompt. Review it, then copy/download it for an approved LLM or send it
+   through the optional Gemini API. Import the returned JSON to restore names
+   locally. See [the cloud workflow](local_install.md#无需本地模型的日常流程).
 5. Check the quoted emails beside the draft, correct descriptions and status, and exclude
    unsupported items. Save a reviewed snapshot and export Word or JSON.
 
@@ -87,7 +94,10 @@ integrated Ollama connection can interpret client background documents and
 generate structured work-record drafts from chosen email evidence. Documents
 support TXT, Markdown, DOCX, and searchable PDF. Confirmed document-derived
 contacts, companies and aliases participate in Client search; the full selected
-background also accompanies draft generation. See [Local AI setup](ollama_setup.md).
+background also accompanies draft generation. Local model controls are disabled
+by default on main; use the `optional/local-llm` branch for that alternative.
+Maintainers can explicitly set `EML_ENABLE_LOCAL_LLM=1` for the retained local
+integration. See [Local AI setup](ollama_setup.md).
 
 | File | Responsibility |
 | --- | --- |

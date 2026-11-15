@@ -29,6 +29,7 @@ class WorkspaceTests(unittest.TestCase):
         self.temp = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp.cleanup)
         env = patch.dict(os.environ, {
+            "EML_ENABLE_LOCAL_LLM": "1",
             "EML_PROFILE_DB": str(Path(self.temp.name) / "profiles.sqlite3"),
             "EML_AUTH_DIR": str(Path(self.temp.name) / "auth"),
         })
@@ -626,14 +627,16 @@ class WorkspaceTests(unittest.TestCase):
             app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
             self.create(app, "Alex group")
             self.load_selection(app)
-            self.assertEqual(element(app.radio, "Create the draft").value, "Cloud JSON / Gemini")
+            if os.environ.get("EML_ENABLE_LOCAL_LLM") == "1":
+                self.assertEqual(element(app.radio, "Create the draft").value, "Cloud JSON / Gemini")
             self.assertFalse(element(app.checkbox, "Keep this client's processing local").value)
             cid = app.session_state["workspace_client"]
             element(app.checkbox, "Keep this client's processing local").set_value(False)
             element(app.text_input, "Original 1").set_value("ANZ")
             element(app.text_input, "Replace with 1").set_value("BANK")
             element(app.button, "Save generation preferences").click().run()
-            element(app.radio, "Create the draft").set_value("Cloud JSON / Gemini").run()
+            if os.environ.get("EML_ENABLE_LOCAL_LLM") == "1":
+                element(app.radio, "Create the draft").set_value("Cloud JSON / Gemini").run()
             element(app.button, "Prepare prompt + emails for GPT").click().run()
             self.assertFalse(app.exception)
             self.assertTrue(element(app.button, "Send reviewed package to Gemini").disabled)
@@ -709,6 +712,21 @@ class WorkspaceTests(unittest.TestCase):
             self.create(app, "Another group")
             self.assertFalse(any(item.label == "Evidence package" for item in app.selectbox))
             cloud_model.assert_not_called()
+
+    def test_new_install_cloud_roundtrip_without_local_llm(self):
+        with patch.dict(os.environ, {"EML_ENABLE_LOCAL_LLM": "0"}), \
+                patch("workspace_panels.OllamaClient", side_effect=AssertionError("No local model allowed")):
+            self.test_cloud_package_and_restore_work_without_a_local_model_or_network_send()
+
+    def test_default_workspace_hides_local_model_setup(self):
+        with patch.dict(os.environ, {"EML_ENABLE_LOCAL_LLM": "0"}):
+            app = AppTest.from_file(str(ROOT / "client_workspace.py"), default_timeout=15).run()
+            self.create(app, "New account client")
+            self.load_selection(app)
+            self.assertFalse(app.exception)
+            self.assertFalse(any(b.label == "Load local models" for b in app.button))
+            self.assertFalse(any(r.label == "Create the draft" for r in app.radio))
+            self.assertTrue(any(b.label == "Prepare prompt + emails for GPT" for b in app.button))
 
     def test_local_only_client_cannot_prepare_a_cloud_package(self):
         from eml_core import ProfileStore

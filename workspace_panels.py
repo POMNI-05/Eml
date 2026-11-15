@@ -3,6 +3,7 @@
 from pathlib import Path
 import hashlib
 import json
+import os
 
 import streamlit as st
 
@@ -118,6 +119,8 @@ def connection_panel(root: Path, get_service, clear_selection, *, compact=False)
 
 
 def model_panel(root: Path):
+    if os.environ.get("EML_ENABLE_LOCAL_LLM") != "1":
+        return None, st.selectbox("Draft language", ["English", "中文"])
     client = None
     with st.expander("Local AI setup"):
         tutorial = root / "docs" / "ollama_setup.md"
@@ -330,6 +333,9 @@ def background_panel(store, client_id, model_client, language):
                 "Download original document", background.original(client_id, did),
                 file_name=doc.filename, key=f"download_source_{did}",
             )
+    if os.environ.get("EML_ENABLE_LOCAL_LLM") != "1":
+        st.caption("Review extracted details in Client context. Select relevant background documents in Draft & export to include them in the reviewed cloud package.")
+        return
     st.caption(
         "AI can interpret ordinary prose and propose companies, contacts, relationships and service scope. "
         "Confirm suggestions in Client context before they are used for Client search."
@@ -449,6 +455,9 @@ def generation_panel(store, client_id, model_client, language):
             )
     if not result.complete:
         st.warning("The mailbox fetch is incomplete; the draft will cover only the selected evidence.")
+    if os.environ.get("EML_ENABLE_LOCAL_LLM") != "1":
+        prepare_cloud_panel(store, client_id, payload, settings)
+        return
     route = st.radio(
         "Create the draft", ["Local Ollama", "Cloud JSON / Gemini"], index=1, horizontal=True,
         format_func=lambda value: {"Local Ollama": "On this computer", "Cloud JSON / Gemini": "Use GPT or Gemini"}[value],
