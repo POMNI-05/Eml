@@ -94,7 +94,7 @@ class WorkspaceTests(unittest.TestCase):
         self.assertFalse(any(item.label == "Client" for item in app.selectbox))
         self.assertTrue(all(
             element(app.button, title).disabled
-            for title in ("1. Client & folders", "2. Review emails", "3. Draft & export")
+            for title in ("1. Client & scope", "2. Review emails", "3. Draft & export")
         ))
 
     def test_saved_credentials_show_sign_in_without_upload_or_client_setup(self):
@@ -147,7 +147,7 @@ class WorkspaceTests(unittest.TestCase):
         element(app.multiselect, "Client folders").set_value(["L3"]).run()
         with self.assertRaises(KeyError):
             app.session_state["workspace_result"]
-        self.assertEqual(app.session_state["workspace_step"], "1. Client & folders")
+        self.assertEqual(app.session_state["workspace_step"], "1. Client & scope")
 
     def test_client_background_is_independent_of_period_and_reaches_the_draft(self):
         from eml_core import ProfileStore
@@ -194,8 +194,8 @@ class WorkspaceTests(unittest.TestCase):
         element(app.button, "← Back to email review").click().run()
         self.assertEqual(app.session_state["workspace_step"], "2. Review emails")
         self.assertEqual(app.session_state["workspace_selected_ids"], ["m1"])
-        element(app.button, "← Change client folders").click().run()
-        self.assertEqual(app.session_state["workspace_step"], "1. Client & folders")
+        element(app.button, "← Change client & scope").click().run()
+        self.assertEqual(app.session_state["workspace_step"], "1. Client & scope")
         self.assertEqual(len([c for c in self.api.calls if c[0] == "messages.get"]), message_reads)
         self.assertFalse(app.exception)
 
@@ -319,7 +319,7 @@ class WorkspaceTests(unittest.TestCase):
         element(app.text_input, "Subject begins with").set_value("Re:").run()
         with self.assertRaises(KeyError):
             app.session_state["workspace_result"]
-        self.assertEqual(app.session_state["workspace_step"], "1. Client & folders")
+        self.assertEqual(app.session_state["workspace_step"], "1. Client & scope")
         element(app.radio, "Email source").set_value("Client folders (IMAP)").run()
         element(app.radio, "Email source").set_value("Client search").run()
         self.assertEqual(element(app.multiselect, "Find").value, ["Alex", "bookkeeping"])

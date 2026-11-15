@@ -80,7 +80,7 @@ def connection_panel(root: Path, get_service, clear_selection, *, compact=False)
             with st.expander("完整教程 · 中文"):
                 tutorial = root / "docs" / "gmail_setup.md"
                 if tutorial.exists():
-                    st.markdown(tutorial.read_text())
+                    st.markdown(tutorial.read_text(encoding="utf-8"))
         if replace_file and st.button("Cancel"):
             st.session_state.pop("gmail_replace_credentials", None)
             st.rerun()
@@ -123,7 +123,7 @@ def model_panel(root: Path):
         tutorial = root / "docs" / "ollama_setup.md"
         with st.expander("Install and start Ollama"):
             if tutorial.exists():
-                st.markdown(tutorial.read_text())
+                st.markdown(tutorial.read_text(encoding="utf-8"))
         address = st.text_input("Local Ollama address", value="http://127.0.0.1:11434")
         context_size = st.selectbox("Model context size", [16384, 32768, 65536], index=1)
         language = st.selectbox("Draft language", ["English", "中文"])

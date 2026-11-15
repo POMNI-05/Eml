@@ -33,7 +33,7 @@ from workspace_ui import (
 
 ROOT = Path(__file__).resolve().parent
 DB_PATH = Path(os.environ.get("EML_PROFILE_DB", ROOT / "data" / "client_profiles.sqlite3"))
-FOLDERS, EMAILS, DRAFT = "1. Client & folders", "2. Review emails", "3. Draft & export"
+FOLDERS, EMAILS, DRAFT = "1. Client & scope", "2. Review emails", "3. Draft & export"
 
 
 def go_to_step(step):
@@ -333,7 +333,7 @@ with ProfileStore(DB_PATH) as store:
             with mail_tab:
                 st.subheader("Review the correspondence")
                 st.caption("Read each message, keep the relevant evidence, then use the selection for your draft.")
-                st.button("← Change client folders", on_click=go_to_step, args=(FOLDERS,))
+                st.button("← Change client & scope", on_click=go_to_step, args=(FOLDERS,))
 
                 result = st.session_state.get("workspace_result")
                 if result is None:
@@ -439,7 +439,7 @@ with ProfileStore(DB_PATH) as store:
                                 )
                             except Exception as exc:
                                 show_error(exc)
-                        st.caption("Optional. Review suggestions under Client & folders → Client background before confirming them.")
+                        st.caption("Optional. Review suggestions under Client & scope → Client background before confirming them.")
                     export = result.to_dict()
                     export["messages"] = [asdict(message) for message in chosen]
                     export["excluded_message_ids"] = [mid for mid in by_id if mid not in chosen_ids]

@@ -31,7 +31,10 @@ EMAIL_SOURCE_EXAMPLES = {
 
 
 def apply_theme(root: Path):
-    st.markdown(f"<style>{(root / 'assets' / 'workspace.css').read_text()}</style>", unsafe_allow_html=True)
+    st.markdown(
+        f"<style>{(root / 'assets' / 'workspace.css').read_text(encoding='utf-8')}</style>",
+        unsafe_allow_html=True,
+    )
 
 
 def brand():
@@ -65,7 +68,7 @@ def workflow_overview(connected=False):
     st.markdown("#### Your next steps")
     st.caption("Choose a client to begin." if connected else "Available after Gmail is connected.")
     for key, title, description in (
-        ("folders", "1. Client & folders", "Choose the client and their synced folders."),
+        ("folders", "1. Client & scope", "Choose the client, source correspondence and reporting period."),
         ("emails", "2. Review emails", "Keep the correspondence relevant to this work."),
         ("draft", "3. Draft & export", "Prepare a draft, check its sources and export."),
     ):
