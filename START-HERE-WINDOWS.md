@@ -11,7 +11,9 @@
 2. 双击 **Setup.cmd**，首次需联网下载依赖。看到 `Setup complete` 后继续。
 3. 先双击 **Try-Demo.cmd**：使用虚构客户与邮件，不需要 Gmail 登录、OAuth 文件、模型账号或 API key。
 4. 要测试自己的 Gmail / Google Workspace，关闭演示后双击 **Launch-Windows-Test.cmd**，
-   上传自己的 Google Desktop OAuth JSON 并连接账号。参见 [Gmail 设置](docs/gmail_setup.md)。
+   在首页 **Create my Google credentials · 创建自己的凭证** 按六步引导创建自己的项目、启用 Gmail API、
+   设置测试用户并下载 Desktop OAuth JSON，然后在同页上传并登录。已有文件可以直接上传。
+   引导可切换中文并下载完整教程。参见 [Gmail 设置](docs/gmail_setup.md)。
 
 `Launch.cmd` 在这个分支也会启动隔离测试模式。保留终端窗口，结束时 Ctrl+C。
 这个版本不启动本地模型。日常主路径仍是复制脱敏包给公司获准的云模型，再导入返回 JSON。
