@@ -2,7 +2,7 @@ import json
 import os
 import streamlit as st
 
-from fetch_emails import fetch_threads, filter_threads
+from eml_core.fetch_emails import fetch_threads, filter_threads
 
 
 CLIENTS_FILE = "clients.json"

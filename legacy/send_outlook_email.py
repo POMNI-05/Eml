@@ -8,7 +8,7 @@ from urllib.error import HTTPError, URLError
 def main():
     if len(sys.argv) != 6:
         raise SystemExit(
-            "Usage: python send_outlook_email.py "
+            "Usage: python legacy/send_outlook_email.py "
             "<message_id> <subject> <sender_name> <sender_email> <received_at>"
         )
 

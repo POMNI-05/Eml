@@ -17,7 +17,7 @@ For development only (this uses the older checkout-local data defaults):
 python -m venv .venv
 source .venv/bin/activate
 python -m pip install -r requirements.txt
-streamlit run client_workspace.py
+streamlit run eml_ui/client_workspace.py
 ~~~
 
 The opening screen focuses on Gmail sign-in, with the following steps on the
@@ -87,7 +87,7 @@ In stage 2, **Sender** groups messages by email address. Choose a sender and use
 and **Exclude all**. Other senders' individual checkbox choices are preserved.
 
 Outlook-selected messages and pasted Internet Message-IDs are also supported.
-Confirmed profiles can be exported for use with the original app.py.
+Confirmed profiles can be exported for use with the original legacy/app.py.
 
 The local rule extractor provides simple suggestions without a model. The
 integrated Ollama connection can interpret client background documents and
@@ -104,11 +104,11 @@ integration. See [Local AI setup](ollama_setup.md).
 | eml_core/mailbox.py | Exact label/message/conversation selection, pagination, union/deduplication, Sydney dates, MIME text |
 | eml_core/folders.py | Client folder preferences isolated by mailbox, retaining Gmail IDs and full paths |
 | eml_core/profiles.py | Evidence-backed suggestions, review, persistence, incremental extraction, legacy import/export |
-| outlook_adapter.py | Original single-message adapter and added multi-message adapter |
-| outlook_trigger_multi.applescript | Read selected Internet Message-IDs in scriptable Mac Outlook |
+| eml_core/outlook_adapter.py | Original single-message adapter and added multi-message adapter |
+| eml_core/outlook_scripts/outlook_trigger_multi.applescript | Read selected Internet Message-IDs in scriptable Mac Outlook |
 | helpers/inspect_outlook_dictionary.py | Inspect folder terms in the actual installed scripting dictionary |
-| client_workspace.py | Primary Streamlit workspace using the shared modules |
-| workspace_panels.py | Credential upload, local AI, background documents and draft review panels |
+| eml_ui/client_workspace.py | Primary Streamlit workspace using the shared modules |
+| eml_ui/workspace_panels.py | Credential upload, local AI, background documents and draft review panels |
 | eml_core/documents.py | Client-scoped source documents, text extraction and quoted locations |
 | eml_core/ai.py | Local Ollama structured output and background analysis |
 | eml_core/search.py | Search terms and match explanations from confirmed client context |
@@ -134,7 +134,7 @@ The document tests use python-docx, pypdf and ReportLab. They do not contact
 real Gmail, Outlook or an Ollama model.
 See [中文设计说明与复用示例](client_context.md).
 
-The original app.py still provides Gmail search, conversation review and
+The original legacy/app.py still provides Gmail search, conversation review and
 TXT/JSON export. The original FastAPI bridge currently returns metadata.
 Work-record generation, source validation and Word export are connected in the
 new workspace. Issuing invoices, fee calculations, image/scanned-file OCR,

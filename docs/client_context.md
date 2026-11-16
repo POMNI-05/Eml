@@ -24,7 +24,7 @@ python helpers/inspect_outlook_dictionary.py
 在已登录 Gmail 的原项目目录中列出真实服务端标签：
 
 ~~~python
-from fetch_emails import get_gmail_service
+from eml_core.fetch_emails import get_gmail_service
 from eml_core import GmailMailbox
 
 mailbox = GmailMailbox(get_gmail_service())
@@ -72,7 +72,7 @@ threads = mailbox.select(Selection(thread_ids=("gmail-thread-id",)))
 Outlook 多选通过 Internet Message-ID 精确映射：
 
 ~~~python
-from outlook_adapter import get_selected_outlook_message_ids
+from eml_core.outlook_adapter import get_selected_outlook_message_ids
 
 ids = get_selected_outlook_message_ids()
 result = mailbox.select(Selection(internet_message_ids=tuple(ids)))
@@ -145,7 +145,7 @@ with ProfileStore("data/client_profiles.sqlite3") as store:
 ~~~
 
 possible_needs 始终单独作为假设输出，保留它不表示已提供服务。
-export_legacy() 导出已确认背景，格式兼容原 app.py，不含待审核候选或潜在需求。
+export_legacy() 导出已确认背景，格式兼容原 legacy/app.py，不含待审核候选或潜在需求。
 工作界面提供下载，用户核对后可替换原 clients.json。
 import_legacy(data) 支持原单对象、列表和包含 clients 列表的格式；
 相同 client_id 已存在时不覆盖。

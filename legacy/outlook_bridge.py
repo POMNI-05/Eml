@@ -1,12 +1,12 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
-from fetch_emails import (
+from eml_core.fetch_emails import (
     find_gmail_message_by_rfc822_id,
     get_gmail_service,
     get_gmail_thread,
 )
-from gmail_parser import parse_gmail_thread
+from eml_core.gmail_parser import parse_gmail_thread
 
 app = FastAPI()
 

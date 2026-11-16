@@ -1,5 +1,5 @@
 -- Read-only Legacy Outlook selection. Uses the same dictionary terms as
--- outlook_trigger.applescript, but returns one Internet Message-ID per line.
+-- eml_core/outlook_scripts/outlook_trigger.applescript, but returns one Internet Message-ID per line.
 -- Validate against the installed Outlook version before relying on it.
 on extractMessageID(headerText)
     repeat with headerLine in paragraphs of headerText

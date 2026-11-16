@@ -50,7 +50,7 @@ Launch 的默认数据位置独立于代码目录：
 映射包含真实资料，应使用受控的本机账号、磁盘加密和私有备份。POSIX 文件权限保护不等同于 Windows ACL 验证。
 
 `--data-dir` 或 `EML_DATA_DIR` 可改数据根目录。显式 `EML_AUTH_DIR` / `EML_PROFILE_DB` 仍优先。
-直接运行旧的 `streamlit run client_workspace.py` 使用项目目录的数据默认值，不是 Launch 的新位置。
+直接运行旧的 `streamlit run eml_ui/client_workspace.py` 使用项目目录的数据默认值，不是 Launch 的新位置。
 如果旧资料在当前 checkout，先停止旧程序并备份，再运行：
 
 ```bash

@@ -1,4 +1,4 @@
-"""Run with: streamlit run client_workspace.py
+"""Run with: streamlit run eml_ui/client_workspace.py
 
 The primary work-draft workspace. Reuses the existing Gmail OAuth and reads
 mail only after an explicit fetch action.
@@ -18,20 +18,20 @@ from eml_core import GmailMailbox, ProfileStore, RuleExtractor, Selection, updat
 from eml_core.profiles import SCALAR_FIELDS
 from eml_core.folders import ClientFolderStore
 from eml_core.client_methods import ClientSearchMethodStore
-from fetch_emails import get_gmail_service
-from outlook_adapter import get_selected_outlook_message_ids
+from eml_core.fetch_emails import get_gmail_service
+from eml_core.outlook_adapter import get_selected_outlook_message_ids
 from eml_core.search import match_reasons
-from workspace_panels import (
+from eml_ui.workspace_panels import (
     connection_panel, model_panel, client_background_panel, client_search_panel, background_panel, generation_panel,
 )
-from workspace_ui import (
+from eml_ui.workspace_ui import (
     apply_theme, workspace_header, disconnected_status, workflow_overview, getting_started, empty_correspondence,
     EMAIL_SOURCE_EXAMPLES,
     email_reader, sender_name, sender_address, message_date,
 )
 
 
-ROOT = Path(__file__).resolve().parent
+ROOT = Path(__file__).resolve().parents[1]
 DB_PATH = Path(os.environ.get("EML_PROFILE_DB", ROOT / "data" / "client_profiles.sqlite3"))
 FOLDERS, EMAILS, DRAFT = "1. Client & scope", "2. Review emails", "3. Draft & export"
 

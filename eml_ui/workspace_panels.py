@@ -14,9 +14,9 @@ from eml_core.documents import BackgroundStore, explicit_document_candidates
 from eml_core.search import build_client_search
 from invoice.service import DraftStore, build_inputs, generate_draft, input_digest
 from invoice.renderer import render_docx
-from workspace_ui import activity_sources
-from cloud_panels import generation_settings, pending_cloud_panel, prepare_cloud_panel
-from gmail_onboarding import setup_guide
+from eml_ui.workspace_ui import activity_sources
+from eml_ui.cloud_panels import generation_settings, pending_cloud_panel, prepare_cloud_panel
+from eml_ui.gmail_onboarding import setup_guide
 
 
 def _clear_account(clear_selection):

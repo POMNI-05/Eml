@@ -68,7 +68,7 @@ def launch_command(port):
     if not 1024 <= port <= 65535:
         raise ValueError("Choose a local port from 1024 to 65535.")
     return [
-        sys.executable, "-m", "streamlit", "run", str(ROOT / "client_workspace.py"),
+        sys.executable, "-m", "streamlit", "run", str(ROOT / "eml_ui/client_workspace.py"),
         "--server.address=127.0.0.1", f"--server.port={port}", "--server.headless=true",
         "--browser.gatherUsageStats=false", "--server.enableXsrfProtection=true",
     ]

@@ -1,14 +1,14 @@
 from pprint import pprint
 
-from outlook_adapter import get_selected_outlook_email
+from eml_core.outlook_adapter import get_selected_outlook_email
 
-from fetch_emails import (
+from eml_core.fetch_emails import (
     get_gmail_service,
     find_gmail_message_by_rfc822_id,
     get_gmail_thread,
 )
 
-from gmail_parser import parse_gmail_thread
+from eml_core.gmail_parser import parse_gmail_thread
 
 
 def main():

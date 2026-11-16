@@ -190,9 +190,9 @@ class CredentialTests(unittest.TestCase):
         self.assertFalse(self.auth.token_path.exists())
 
     def test_shared_gmail_entrypoint_forwards_the_sign_in_link_callback(self):
-        from fetch_emails import get_gmail_service
+        from eml_core.fetch_emails import get_gmail_service
         callback = Mock()
-        with patch("fetch_emails.GmailAuth") as auth:
+        with patch("eml_core.fetch_emails.GmailAuth") as auth:
             service = get_gmail_service(on_authorization_url=callback)
         auth.return_value.get_service.assert_called_once_with(on_authorization_url=callback)
         self.assertIs(service, auth.return_value.get_service.return_value)
