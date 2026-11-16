@@ -15,7 +15,7 @@ from eml_core import ProfileStore
 from invoice.exchange import ExchangeStore
 from invoice.templates import GenerationTemplateStore
 from tests.fakes import FakeGmail, raw_message, attach_file
-import workspace_ui
+import eml_ui.workspace_ui
 
 os.environ.update(trial_environment(demo=True))
 
@@ -39,7 +39,7 @@ if "windows_demo_client" not in st.session_state:
                                                 privacy_rules="Demo Consulting => ENTITY", local_only=False)
     st.session_state.update(windows_demo_client=cid, workspace_client=cid, workspace_account="staff@firm.example")
 
-original_header = workspace_ui.workspace_header
+original_header = eml_ui.workspace_ui.workspace_header
 
 
 def demo_header(*args, **kwargs):
@@ -47,9 +47,9 @@ def demo_header(*args, **kwargs):
     st.info("SYNTHETIC DEMO · No Gmail login. Select Clients/Demo Consulting and turn off Filter by date. After preparing a package, download the scripted response below to test JSON import, review and Word export.")
 
 
-with patch("fetch_emails.get_gmail_service", return_value=mailbox()), \
-        patch("workspace_ui.workspace_header", demo_header):
-    runpy.run_path(str(ROOT / "client_workspace.py"), run_name="__main__")
+with patch("eml_core.fetch_emails.get_gmail_service", return_value=mailbox()), \
+        patch("eml_ui.workspace_ui.workspace_header", demo_header):
+    runpy.run_path(str(ROOT / "eml_ui/client_workspace.py"), run_name="__main__")
 
 cid = st.session_state.get("workspace_client")
 if cid:

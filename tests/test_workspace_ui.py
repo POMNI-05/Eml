@@ -39,7 +39,7 @@ class WorkspaceTests(unittest.TestCase):
             raw_message("m1", body="Company: Example Pty Ltd\nIndustry: Wholesale"),
             raw_message("outside", labels=("L3",), sender="Other <other@outside.example>"),
         ])
-        gmail = patch("fetch_emails.get_gmail_service", return_value=self.api)
+        gmail = patch("eml_core.fetch_emails.get_gmail_service", return_value=self.api)
         self.get_service = gmail.start()
         self.addCleanup(gmail.stop)
 
@@ -74,11 +74,11 @@ class WorkspaceTests(unittest.TestCase):
 
     def generate_test_draft(self):
         from tests.test_generation import FakeModel
-        model = patch("workspace_panels.OllamaClient", side_effect=lambda *a, **k: FakeModel())
+        model = patch("eml_ui.workspace_panels.OllamaClient", side_effect=lambda *a, **k: FakeModel())
         model.start()
         self.addCleanup(model.stop)
         self.api.data["m1"] = raw_message("m1", body="I completed the bookkeeping review.")
-        app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
+        app = AppTest.from_file(str(ROOT / "eml_ui/client_workspace.py")).run()
         self.create(app, "Alex group")
         self.load_selection(app)
         element(app.radio, "Create the draft").set_value("Local Ollama").run()
@@ -89,7 +89,7 @@ class WorkspaceTests(unittest.TestCase):
         return app, cid, app.session_state[f"work_draft_{cid}"]
 
     def test_launch_does_not_read_mail_or_require_credentials(self):
-        app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
+        app = AppTest.from_file(str(ROOT / "eml_ui/client_workspace.py")).run()
         self.assertFalse(app.exception)
         self.get_service.assert_not_called()
         self.assertFalse(any(item.label == "Client" for item in app.selectbox))
@@ -102,7 +102,7 @@ class WorkspaceTests(unittest.TestCase):
         auth_dir = Path(os.environ["EML_AUTH_DIR"])
         auth_dir.mkdir()
         (auth_dir / "credentials.json").write_text("{}")
-        app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
+        app = AppTest.from_file(str(ROOT / "eml_ui/client_workspace.py")).run()
         self.assertFalse(app.exception)
         self.assertFalse(element(app.button, "Connect Gmail").disabled)
         self.assertFalse(any(
@@ -115,7 +115,7 @@ class WorkspaceTests(unittest.TestCase):
         auth_dir = Path(os.environ["EML_AUTH_DIR"])
         auth_dir.mkdir()
         (auth_dir / "token.json").write_text("{}")
-        app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
+        app = AppTest.from_file(str(ROOT / "eml_ui/client_workspace.py")).run()
         self.assertFalse(app.exception)
         self.assertFalse(element(app.button, "Connect Gmail").disabled)
         self.assertFalse(any(
@@ -124,7 +124,7 @@ class WorkspaceTests(unittest.TestCase):
         self.get_service.assert_not_called()
 
     def test_select_extract_confirm_and_switch_client(self):
-        app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
+        app = AppTest.from_file(str(ROOT / "eml_ui/client_workspace.py")).run()
         self.create(app, "Alex group")
         self.load_selection(app)
         self.assertEqual(
@@ -142,7 +142,7 @@ class WorkspaceTests(unittest.TestCase):
         self.assertTrue(any("No confirmed context" in message.value for message in app.info))
 
     def test_changed_label_scope_clears_previous_evidence(self):
-        app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
+        app = AppTest.from_file(str(ROOT / "eml_ui/client_workspace.py")).run()
         self.create(app, "Alex group")
         self.load_selection(app)
         element(app.multiselect, "Client folders").set_value(["L3"]).run()
@@ -155,8 +155,8 @@ class WorkspaceTests(unittest.TestCase):
         from tests.test_generation import FakeModel
         model = FakeModel()
         note = "Wholesale client with two related companies. Quarterly bookkeeping review."
-        with patch("workspace_panels.OllamaClient", side_effect=lambda *a, **k: model):
-            app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
+        with patch("eml_ui.workspace_panels.OllamaClient", side_effect=lambda *a, **k: model):
+            app = AppTest.from_file(str(ROOT / "eml_ui/client_workspace.py")).run()
             self.create(app, "Alex")
             alex = app.session_state["workspace_client"]
             element(app.text_area, "Background note").set_value(note)
@@ -184,7 +184,7 @@ class WorkspaceTests(unittest.TestCase):
             self.assertEqual(element(app.text_area, "Background note").value, note)
 
     def test_action_buttons_advance_and_go_back_without_refetching(self):
-        app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
+        app = AppTest.from_file(str(ROOT / "eml_ui/client_workspace.py")).run()
         self.create(app, "Alex group")
         self.assertEqual(element(app.radio, "Email source").value, "Client search")
         self.load_selection(app)
@@ -205,7 +205,7 @@ class WorkspaceTests(unittest.TestCase):
             ("a1", "Alex <Alex@client.example>"), ("a2", "Accounts <alex@client.example>"),
             ("b", "Alex <other@client.example>"), ("c", "news@example.com"),
         ]}
-        app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
+        app = AppTest.from_file(str(ROOT / "eml_ui/client_workspace.py")).run()
         self.create(app, "Alex")
         self.load_selection(app)
         import streamlit as st
@@ -216,7 +216,7 @@ class WorkspaceTests(unittest.TestCase):
                 return [{**row, "Include": row["Message ID"] != "b"} for row in rows]
             return rows
         # AppTest cannot interact with the canvas editor; supply its edited rows.
-        with patch("workspace_panels.st.data_editor", side_effect=omit_one_message):
+        with patch("eml_ui.workspace_panels.st.data_editor", side_effect=omit_one_message):
             app.run()
             self.assertEqual(app.session_state["workspace_selected_ids"], ["a1", "a2", "c"])
             element(app.selectbox, "Sender").set_value("alex@client.example").run()
@@ -234,7 +234,7 @@ class WorkspaceTests(unittest.TestCase):
 
     def test_client_folders_and_nested_choice_restore_without_crossing_clients(self):
         self.api.data["child"] = raw_message("child", labels=("L2",))
-        app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
+        app = AppTest.from_file(str(ROOT / "eml_ui/client_workspace.py")).run()
         self.create(app, "Alex group")
         alex = app.session_state["workspace_client"]
         element(app.radio, "Email source").set_value("Client folders (IMAP)").run()
@@ -259,7 +259,7 @@ class WorkspaceTests(unittest.TestCase):
         self.assertFalse(app.exception)
 
     def test_folder_renames_keep_ids_and_removed_folders_require_a_new_choice(self):
-        app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
+        app = AppTest.from_file(str(ROOT / "eml_ui/client_workspace.py")).run()
         self.create(app, "Alex group")
         self.load_selection(app)
         self.api.label_data[0]["name"] = "Clients/Alex Group"
@@ -280,10 +280,10 @@ class WorkspaceTests(unittest.TestCase):
             "thread_id": "t1", "subject": "Example", "message_count": 1,
             "full_text": "Example evidence", "messages": [],
         }]
-        with patch("fetch_emails.fetch_threads", return_value=threads), patch(
-            "fetch_emails.filter_threads", return_value=threads
+        with patch("eml_core.fetch_emails.fetch_threads", return_value=threads), patch(
+            "eml_core.fetch_emails.filter_threads", return_value=threads
         ):
-            app = AppTest.from_file(str(ROOT / "app.py")).run()
+            app = AppTest.from_file(str(ROOT / "legacy/app.py")).run()
             element(app.button, "Fetch emails").click().run()
             element(app.multiselect, "Choose relevant conversations").set_value([0]).run()
             element(app.button, "Use selected conversations").click().run()
@@ -304,7 +304,7 @@ class WorkspaceTests(unittest.TestCase):
             message = raw_message(key, body=body)
             next(h for h in message["payload"]["headers"] if h["name"] == "Subject")["value"] = subject
             self.api.data[key] = message
-        app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
+        app = AppTest.from_file(str(ROOT / "eml_ui/client_workspace.py")).run()
         self.create(app, "Alex")
         element(app.radio, "Email source").set_value("Client search").run()
         element(app.multiselect, "Find").set_value(["Alex", "bookkeeping"]).run()
@@ -331,7 +331,7 @@ class WorkspaceTests(unittest.TestCase):
 
     def test_search_reset_restores_visible_defaults_and_empty_search_cannot_fetch(self):
         from eml_core import ProfileStore
-        app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
+        app = AppTest.from_file(str(ROOT / "eml_ui/client_workspace.py")).run()
         self.create(app, "Alex")
         with ProfileStore(os.environ["EML_PROFILE_DB"]) as profiles:
             profiles.add_manual(app.session_state["workspace_client"], "aliases", "Alex")
@@ -350,7 +350,7 @@ class WorkspaceTests(unittest.TestCase):
         self.assertFalse(app.exception)
 
     def test_credential_upload_and_tutorial_are_available_before_client_creation(self):
-        app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
+        app = AppTest.from_file(str(ROOT / "eml_ui/client_workspace.py")).run()
         labels = [item.proto.label for item in app.get("file_uploader")]
         self.assertIn("Drop Google credentials JSON here", labels)
         self.assertTrue(any("获取 Gmail 凭证" in item.value for item in app.markdown))
@@ -360,9 +360,9 @@ class WorkspaceTests(unittest.TestCase):
         from unittest.mock import Mock
         import streamlit as st
         from tests.test_auth_documents import credential_bytes
-        from gmail_onboarding import STEP_OPTIONS
+        from eml_ui.gmail_onboarding import STEP_OPTIONS
 
-        app = AppTest.from_file(str(ROOT / "client_workspace.py"), default_timeout=15).run()
+        app = AppTest.from_file(str(ROOT / "eml_ui/client_workspace.py"), default_timeout=15).run()
         element(app.selectbox, "Guide language / 教程语言").set_value("中文").run()
         self.assertEqual(element(app.selectbox, "Setup step / 设置步骤").value, STEP_OPTIONS[0])
         self.assertTrue(element(app.button, "上一步").disabled)
@@ -387,7 +387,7 @@ class WorkspaceTests(unittest.TestCase):
             if label == "Drop Google credentials JSON here":
                 return upload
             return original_upload(label, *args, **kwargs)
-        with patch("workspace_panels.st.file_uploader", side_effect=synthetic_upload):
+        with patch("eml_ui.workspace_panels.st.file_uploader", side_effect=synthetic_upload):
             app.run()
             element(app.button, "Save and continue").click().run()
         self.assertFalse(app.exception)
@@ -412,7 +412,7 @@ class WorkspaceTests(unittest.TestCase):
             if str(kwargs.get("key", "")).startswith("activities_"):
                 return edited
             return original_editor(data, **kwargs)
-        with patch("workspace_panels.st.data_editor", side_effect=edit_activities):
+        with patch("eml_ui.workspace_panels.st.data_editor", side_effect=edit_activities):
             app.run()
             self.assertFalse(app.exception)
             self.assertTrue(element(app.button, "Save edited draft").disabled)
@@ -428,8 +428,8 @@ class WorkspaceTests(unittest.TestCase):
         model = FakeModel()
         self.api.data["m1"] = raw_message("m1", body="I completed the bookkeeping review.")
         self.api.data["m2"] = raw_message("m2", body="Unrelated correspondence")
-        with patch("workspace_panels.OllamaClient", side_effect=lambda *a, **k: model):
-            app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
+        with patch("eml_ui.workspace_panels.OllamaClient", side_effect=lambda *a, **k: model):
+            app = AppTest.from_file(str(ROOT / "eml_ui/client_workspace.py")).run()
             self.create(app, "Alex group")
             self.load_selection(app)
             import streamlit as st
@@ -441,7 +441,7 @@ class WorkspaceTests(unittest.TestCase):
                 return rows
             # AppTest does not provide an interactive data-editor widget.
             # Return the user's edited rows and verify the resulting AI scope.
-            with patch("workspace_panels.st.data_editor", side_effect=choose_messages):
+            with patch("eml_ui.workspace_panels.st.data_editor", side_effect=choose_messages):
                 app.run()
                 self.assertEqual(app.session_state["workspace_selected_ids"], ["m1"])
                 app.run()
@@ -460,7 +460,7 @@ class WorkspaceTests(unittest.TestCase):
         auth_dir = Path(os.environ["EML_AUTH_DIR"])
         auth_dir.mkdir()
         (auth_dir / "credentials.json").write_text("{}")
-        app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
+        app = AppTest.from_file(str(ROOT / "eml_ui/client_workspace.py")).run()
         element(app.button, "Connect Gmail").click().run()
         self.assertFalse(app.exception)
         self.assertEqual(app.session_state["workspace_account"], self.api.account)
@@ -479,8 +479,8 @@ class WorkspaceTests(unittest.TestCase):
             on_authorization_url(url)
             return self.api
         self.get_service.side_effect = connect
-        app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
-        with patch("workspace_panels.st.link_button", wraps=st.link_button) as link:
+        app = AppTest.from_file(str(ROOT / "eml_ui/client_workspace.py")).run()
+        with patch("eml_ui.workspace_panels.st.link_button", wraps=st.link_button) as link:
             element(app.button, "Connect Gmail").click().run()
         self.assertFalse(app.exception)
         link.assert_called_once_with("Continue to Google sign-in", url, type="primary")
@@ -496,7 +496,7 @@ class WorkspaceTests(unittest.TestCase):
             on_authorization_url("https://accounts.google.com/o/oauth2/auth?state=synthetic-state")
             raise CredentialError("Google sign-in timed out. Click Connect Gmail again.")
         self.get_service.side_effect = connect
-        app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
+        app = AppTest.from_file(str(ROOT / "eml_ui/client_workspace.py")).run()
         element(app.button, "Connect Gmail").click().run()
         self.assertFalse(app.exception)
         self.assertTrue(any("timed out" in message.value for message in app.error))
@@ -504,7 +504,7 @@ class WorkspaceTests(unittest.TestCase):
         self.assertFalse(self.api.calls)
 
     def test_disconnecting_hides_client_workflow_and_clears_old_email_scope(self):
-        app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
+        app = AppTest.from_file(str(ROOT / "eml_ui/client_workspace.py")).run()
         self.create(app, "Alex")
         self.load_selection(app)
         element(app.button, "Disconnect Gmail").click().run()
@@ -518,7 +518,7 @@ class WorkspaceTests(unittest.TestCase):
         ))
 
     def test_credentials_can_be_changed_from_compact_account_settings_and_cancelled(self):
-        app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
+        app = AppTest.from_file(str(ROOT / "eml_ui/client_workspace.py")).run()
         self.create(app, "Alex")
         element(app.button, "Change Google app file").click().run()
         self.assertFalse(app.exception)
@@ -565,8 +565,8 @@ class WorkspaceTests(unittest.TestCase):
             "m1", body="I completed the bookkeeping review.",
             sender="staff@firm.example", to="alex@client.example",
         )
-        with patch("workspace_panels.OllamaClient", side_effect=lambda *a, **k: model):
-            app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
+        with patch("eml_ui.workspace_panels.OllamaClient", side_effect=lambda *a, **k: model):
+            app = AppTest.from_file(str(ROOT / "eml_ui/client_workspace.py")).run()
             self.create(app, "Alex group")
             cid = app.session_state["workspace_client"]
             with ProfileStore(os.environ["EML_PROFILE_DB"]) as profiles:
@@ -624,7 +624,7 @@ class WorkspaceTests(unittest.TestCase):
         from eml_core import ProfileStore
         from invoice.templates import GenerationTemplateStore
 
-        app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
+        app = AppTest.from_file(str(ROOT / "eml_ui/client_workspace.py")).run()
         self.create(app, "Grid client")
         cid = app.session_state["workspace_client"]
         self.assertFalse(any(item.label == "Client generation preferences" for item in app.expander))
@@ -647,7 +647,7 @@ class WorkspaceTests(unittest.TestCase):
             self.assertEqual(GenerationTemplateStore(profiles).get(cid)["privacy_rules"],
                              "ANZ => BANK\nExample Pty Ltd => ENTITY")
         # Saved rules survive a new session; all empty cells clear the rules.
-        app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
+        app = AppTest.from_file(str(ROOT / "eml_ui/client_workspace.py")).run()
         self.connect(app)
         element(app.selectbox, "Client").set_value(cid).run()
         self.assertEqual(element(app.text_input, "Original 1").value, "ANZ")
@@ -665,8 +665,8 @@ class WorkspaceTests(unittest.TestCase):
         from invoice.service import DraftStore
         from unittest.mock import Mock
         self.api.data["m1"] = raw_message("m1", body="I completed the ANZ reconciliation.")
-        with patch("cloud_panels.GeminiClient") as cloud_model:
-            app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
+        with patch("eml_ui.cloud_panels.GeminiClient") as cloud_model:
+            app = AppTest.from_file(str(ROOT / "eml_ui/client_workspace.py")).run()
             self.create(app, "Alex group")
             self.load_selection(app)
             if os.environ.get("EML_ENABLE_LOCAL_LLM") == "1":
@@ -695,7 +695,7 @@ class WorkspaceTests(unittest.TestCase):
                                          "uncertainties": []}], "open_questions": []}}
             # Reopen with no email selection: the saved local snapshot must
             # suffice to restore an asynchronously returned response.
-            app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
+            app = AppTest.from_file(str(ROOT / "eml_ui/client_workspace.py")).run()
             self.connect(app)
             element(app.selectbox, "Client").set_value(cid).run()
             self.assertTrue(any(item.label == "Evidence package" for item in app.selectbox))
@@ -709,7 +709,7 @@ class WorkspaceTests(unittest.TestCase):
                 if label == "Upload cloud response JSON to restore locally":
                     return upload
                 return original_upload(label, *args, **kwargs)
-            with patch("cloud_panels.st.file_uploader", side_effect=file_upload):
+            with patch("eml_ui.cloud_panels.st.file_uploader", side_effect=file_upload):
                 app.run()
                 element(app.button, "Restore and save response").click().run()
             self.assertFalse(app.exception)
@@ -724,7 +724,7 @@ class WorkspaceTests(unittest.TestCase):
                 if str(kwargs.get("key", "")).startswith("activities_"):
                     return edited
                 return original_editor(data, **kwargs)
-            with patch("workspace_panels.st.data_editor", side_effect=edit_activities):
+            with patch("eml_ui.workspace_panels.st.data_editor", side_effect=edit_activities):
                 element(app.text_input, "Reviewer name").set_value("Cloud reviewer").run()
                 element(
                     app.checkbox, "I have checked the included activities against the email evidence"
@@ -735,7 +735,7 @@ class WorkspaceTests(unittest.TestCase):
             self.assertTrue(revised["reviewed"])
             self.assertEqual(revised["review_edits"], edited)
             self.assertEqual(revised["reviewer"], "Cloud reviewer")
-            app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
+            app = AppTest.from_file(str(ROOT / "eml_ui/client_workspace.py")).run()
             self.connect(app)
             element(app.selectbox, "Client").set_value(cid).run()
             element(app.selectbox, "Saved draft").set_value(revised["draft_id"]).run()
@@ -757,12 +757,12 @@ class WorkspaceTests(unittest.TestCase):
 
     def test_new_install_cloud_roundtrip_without_local_llm(self):
         with patch.dict(os.environ, {"EML_ENABLE_LOCAL_LLM": "0"}), \
-                patch("workspace_panels.OllamaClient", side_effect=AssertionError("No local model allowed")):
+                patch("eml_ui.workspace_panels.OllamaClient", side_effect=AssertionError("No local model allowed")):
             self.test_cloud_package_and_restore_work_without_a_local_model_or_network_send()
 
     def test_default_workspace_hides_local_model_setup(self):
         with patch.dict(os.environ, {"EML_ENABLE_LOCAL_LLM": "0"}):
-            app = AppTest.from_file(str(ROOT / "client_workspace.py"), default_timeout=15).run()
+            app = AppTest.from_file(str(ROOT / "eml_ui/client_workspace.py"), default_timeout=15).run()
             self.create(app, "New account client")
             self.load_selection(app)
             self.assertFalse(app.exception)
@@ -773,7 +773,7 @@ class WorkspaceTests(unittest.TestCase):
     def test_local_only_client_cannot_prepare_a_cloud_package(self):
         from eml_core import ProfileStore
         from invoice.exchange import ExchangeStore
-        app = AppTest.from_file(str(ROOT / "client_workspace.py")).run()
+        app = AppTest.from_file(str(ROOT / "eml_ui/client_workspace.py")).run()
         self.create(app, "Private client")
         element(app.checkbox, "Keep this client's processing local").set_value(True).run()
         element(app.button, "Save generation preferences").click().run()

@@ -41,7 +41,7 @@ flowchart TD
 
 | 部分 | 技术与文件 | 当前选择及原因 |
 | --- | --- | --- |
-| 用户界面 | Python、Streamlit；`client_workspace.py`、`workspace_panels.py` | 沿用现有三步邮件工作区，无需重写 React/Electron |
+| 用户界面 | Python、Streamlit；`eml_ui/client_workspace.py`、`eml_ui/workspace_panels.py` | 沿用现有三步邮件工作区，无需重写 React/Electron |
 | 本机启动 | `Launch.command` / `Launch.cmd`、`helpers/launch_local.py` | 只监听 `127.0.0.1`，代码不自动更新，运行数据可放在代码目录以外 |
 | Gmail 登录 | Google Desktop OAuth、`gmail.readonly`；`eml_core/auth.py` | 沿用上传 credentials 与浏览器登录；不是远端 Web OAuth |
 | 选邮件 | Gmail API、IMAP 文件夹对应的标签 ID；`mailbox.py`、`folders.py`、`search.py` | 保留文件夹、多选、排除、分页、日期、客户搜索和来源范围 |
@@ -123,7 +123,7 @@ Paid 服务不用于产品训练，并不等于零保留或必定在澳洲处理
 ## 版本与尚未验证的内容
 
 本轮只对原生成服务/UI 加可选入口，新增独立模块和 SQLite 表，不重建旧表、不改既有字段。
-没有修改文件夹读取、搜索语义、原 `app.py`、附件解析、Outlook 脚本或 Word renderer。
+没有修改文件夹读取、搜索语义、原 `legacy/app.py`、附件解析、Outlook 脚本或 Word renderer。
 没有开启 Pages、公网监听、账号共享、自动合并或自动发出 invoice。
 
 迁移时先停止程序、备份完整本地数据，再换代码版本。新表可以与旧版本共存；旧版本不展示

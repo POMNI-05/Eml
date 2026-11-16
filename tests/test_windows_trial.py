@@ -6,7 +6,7 @@ import unittest
 from unittest.mock import patch
 
 from helpers.windows_trial import trial_environment
-from outlook_adapter import get_selected_outlook_message_ids, OutlookSelectionError
+from eml_core.outlook_adapter import get_selected_outlook_message_ids, OutlookSelectionError
 
 
 class WindowsTrialTests(unittest.TestCase):
@@ -24,9 +24,9 @@ class WindowsTrialTests(unittest.TestCase):
             self.assertNotIn("GEMINI_API_KEY", env)
 
     def invoke(self, data, code=0):
-        with patch("outlook_adapter.sys.platform", "win32"), \
-                patch("outlook_adapter.subprocess.CREATE_NO_WINDOW", 0x08000000, create=True), \
-                patch("outlook_adapter.subprocess.run", return_value=subprocess.CompletedProcess([], code, json.dumps(data), "private-provider-details")) as run:
+        with patch("eml_core.outlook_adapter.sys.platform", "win32"), \
+                patch("eml_core.outlook_adapter.subprocess.CREATE_NO_WINDOW", 0x08000000, create=True), \
+                patch("eml_core.outlook_adapter.subprocess.run", return_value=subprocess.CompletedProcess([], code, json.dumps(data), "private-provider-details")) as run:
             result = get_selected_outlook_message_ids()
             self.assertEqual(run.call_args.args[0][0], "powershell.exe")
             self.assertEqual(run.call_args.kwargs["timeout"], 60)
@@ -47,8 +47,8 @@ class WindowsTrialTests(unittest.TestCase):
                 self.invoke({"ids": ids})
 
     def test_outlook_timeout_has_safe_actionable_error(self):
-        with patch("outlook_adapter.sys.platform", "win32"), \
-                patch("outlook_adapter.subprocess.CREATE_NO_WINDOW", 0x08000000, create=True), \
-                patch("outlook_adapter.subprocess.run", side_effect=subprocess.TimeoutExpired("powershell", 60)), \
+        with patch("eml_core.outlook_adapter.sys.platform", "win32"), \
+                patch("eml_core.outlook_adapter.subprocess.CREATE_NO_WINDOW", 0x08000000, create=True), \
+                patch("eml_core.outlook_adapter.subprocess.run", side_effect=subprocess.TimeoutExpired("powershell", 60)), \
                 self.assertRaisesRegex(OutlookSelectionError, "Gmail folders/search"):
             get_selected_outlook_message_ids()

@@ -2,7 +2,11 @@
 
 这是 `test/windows-parity` 分支，与 Mac 交付主线隔离。共享客户、Gmail、附件、脱敏、云包、审核与 Word 导出代码。
 下载 ZIP 后先**全部解压**到固定文件夹，再运行；不要在 ZIP 预览里双击脚本。
-本轮已完成全新安装、168 项测试及浏览器操作验证，详情见[验证记录](docs/windows_validation.md)。
+安装和浏览器操作验证见[验证记录](docs/windows_validation.md)。
+
+**整理后的交付包入口：**外层双击 `Install.cmd` 首次安装，之后每天双击 **`Start.cmd`**。
+`Try-Demo.cmd` 用于免登录演示；内部文件都在 `_app/`。下面列出的 Setup、Launch、诊断和备份脚本位于 `_app/`。
+如果直接下载 GitHub 源码 ZIP，则按下面原有脚本名称操作。
 
 ## 马上试用
 

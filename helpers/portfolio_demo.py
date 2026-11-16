@@ -78,15 +78,15 @@ if "portfolio_client" not in st.session_state:
         workspace_account="reviewer@firm.example", ollama_model_address="http://127.0.0.1:11434",
         ollama_models=[DemoModel.model], ollama_model_choice=DemoModel.model)
 
-import workspace_ui
-if not hasattr(workspace_ui, "_portfolio_header_original"):
-    workspace_ui._portfolio_header_original = workspace_ui.workspace_header
-original_header = workspace_ui._portfolio_header_original
+import eml_ui.workspace_ui
+if not hasattr(eml_ui.workspace_ui, "_portfolio_header_original"):
+    eml_ui.workspace_ui._portfolio_header_original = eml_ui.workspace_ui.workspace_header
+original_header = eml_ui.workspace_ui._portfolio_header_original
 def demo_header(*args, **kwargs):
     original_header(*args, **kwargs)
     st.caption("SYNTHETIC DEMO · Fictional correspondence · Scripted model response")
 
-with patch("fetch_emails.get_gmail_service", return_value=mailbox()), \
-     patch("workspace_panels.OllamaClient", DemoModel), \
-     patch("workspace_ui.workspace_header", demo_header):
-    runpy.run_path(str(ROOT / "client_workspace.py"), run_name="__main__")
+with patch("eml_core.fetch_emails.get_gmail_service", return_value=mailbox()), \
+     patch("eml_ui.workspace_panels.OllamaClient", DemoModel), \
+     patch("eml_ui.workspace_ui.workspace_header", demo_header):
+    runpy.run_path(str(ROOT / "eml_ui/client_workspace.py"), run_name="__main__")

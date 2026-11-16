@@ -15,9 +15,7 @@ FIELD_SEPARATOR = "\x1f"
 
 # aviod hardcoding the path to the AppleScript
 #   instead use Path to get the path of the script relative to this file
-SCRIPT_PATH = Path(__file__).with_name(
-    "outlook_trigger.applescript"
-)
+SCRIPT_PATH = Path(__file__).with_name("outlook_scripts") / "outlook_trigger.applescript"
 
 class OutlookSelectionError(RuntimeError):
     pass
@@ -27,7 +25,7 @@ def get_selected_outlook_email():
     # handshake with the AppleScript to get the selected email's metadata
     result = subprocess.run(
         [
-            # Python runs Terminal command：osascript outlook_trigger.applescript
+            # Python runs Terminal command：osascript eml_core/outlook_scripts/outlook_trigger.applescript
             "osascript",
             str(SCRIPT_PATH),
         ],
@@ -84,7 +82,7 @@ def get_selected_outlook_message_ids():
     """
     if sys.platform == "win32":
         return _windows_selected_message_ids()
-    script = Path(__file__).with_name("outlook_trigger_multi.applescript")
+    script = Path(__file__).with_name("outlook_scripts") / "outlook_trigger_multi.applescript"
     try:
         result = subprocess.run(
             ["osascript", str(script)], capture_output=True, text=True, timeout=60
@@ -105,7 +103,7 @@ def get_selected_outlook_message_ids():
 
 def _windows_selected_message_ids():
     """Read selection from an already running Classic Outlook, without pywin32."""
-    script = Path(__file__).with_name("helpers") / "outlook_selection_windows.ps1"
+    script = Path(__file__).resolve().parents[1] / "helpers" / "outlook_selection_windows.ps1"
     try:
         result = subprocess.run(
             ["powershell.exe", "-NoLogo", "-NoProfile", "-NonInteractive", "-Command", script.read_text(encoding="utf-8")],

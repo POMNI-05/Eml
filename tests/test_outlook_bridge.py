@@ -5,7 +5,7 @@ import json
 import unittest
 from unittest.mock import patch
 
-from outlook_bridge import app
+from legacy.outlook_bridge import app
 
 
 class OutlookBridgeTests(unittest.IsolatedAsyncioTestCase):
@@ -29,10 +29,10 @@ class OutlookBridgeTests(unittest.IsolatedAsyncioTestCase):
 
     async def test_success_does_not_print_correspondence(self):
         output = io.StringIO()
-        with patch("outlook_bridge.get_gmail_service"), \
-                patch("outlook_bridge.find_gmail_message_by_rfc822_id", return_value={"id": "m1", "threadId": "t1"}), \
-                patch("outlook_bridge.get_gmail_thread", return_value={"messages": [{}]}), \
-                patch("outlook_bridge.parse_gmail_thread", return_value={"messages": [{"body_text": "private-body"}]}), \
+        with patch("legacy.outlook_bridge.get_gmail_service"), \
+                patch("legacy.outlook_bridge.find_gmail_message_by_rfc822_id", return_value={"id": "m1", "threadId": "t1"}), \
+                patch("legacy.outlook_bridge.get_gmail_thread", return_value={"messages": [{}]}), \
+                patch("legacy.outlook_bridge.parse_gmail_thread", return_value={"messages": [{"body_text": "private-body"}]}), \
                 redirect_stdout(output):
             status, body = await self.request()
         self.assertEqual(status, 200)
@@ -41,27 +41,27 @@ class OutlookBridgeTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotIn("private", json.dumps(body))
 
     async def test_missing_message_is_404(self):
-        with patch("outlook_bridge.get_gmail_service"), \
-                patch("outlook_bridge.find_gmail_message_by_rfc822_id", return_value=None):
+        with patch("legacy.outlook_bridge.get_gmail_service"), \
+                patch("legacy.outlook_bridge.find_gmail_message_by_rfc822_id", return_value=None):
             self.assertEqual((await self.request())[0], 404)
 
     async def test_connection_errors_are_actionable_without_private_details(self):
         for error, expected in [(RuntimeError("private-token"), 409), (OSError("private-token"), 502)]:
             with self.subTest(error=type(error).__name__), \
-                    patch("outlook_bridge.get_gmail_service", side_effect=error):
+                    patch("legacy.outlook_bridge.get_gmail_service", side_effect=error):
                 status, body = await self.request()
                 self.assertEqual(status, expected)
                 self.assertNotIn("private-token", json.dumps(body))
 
     async def test_thread_failure_is_502_without_provider_details(self):
-        with patch("outlook_bridge.get_gmail_service"), \
-                patch("outlook_bridge.find_gmail_message_by_rfc822_id", return_value={"id": "m1", "threadId": "t1"}), \
-                patch("outlook_bridge.get_gmail_thread", side_effect=OSError("private-body")):
+        with patch("legacy.outlook_bridge.get_gmail_service"), \
+                patch("legacy.outlook_bridge.find_gmail_message_by_rfc822_id", return_value={"id": "m1", "threadId": "t1"}), \
+                patch("legacy.outlook_bridge.get_gmail_thread", side_effect=OSError("private-body")):
             status, body = await self.request()
         self.assertEqual(status, 502)
         self.assertNotIn("private-body", json.dumps(body))
 
     async def test_invalid_request_is_rejected_before_authorization(self):
-        with patch("outlook_bridge.get_gmail_service") as connect:
+        with patch("legacy.outlook_bridge.get_gmail_service") as connect:
             self.assertEqual((await self.request({}))[0], 422)
             connect.assert_not_called()

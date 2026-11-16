@@ -20,7 +20,8 @@ class LocalLauncherTests(unittest.TestCase):
             self.assertIn("--server.port=8502", command)
             self.assertIn("--server.headless=true", command)
             self.assertNotIn("--server.enableXsrfProtection=false", command)
-            self.assertTrue(any(item.endswith("client_workspace.py") and Path(item).is_absolute() for item in command))
+            self.assertTrue(any(Path(item).name == "client_workspace.py" and Path(item).parent.name == "eml_ui"
+                                and Path(item).is_absolute() for item in command))
 
     def test_explicit_migration_copies_sqlite_and_never_overwrites_existing_data(self):
         with tempfile.TemporaryDirectory() as temp:

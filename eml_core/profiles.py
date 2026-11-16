@@ -466,7 +466,7 @@ class ProfileStore:
         return len(plan)
 
     def export_legacy(self) -> list[dict]:
-        """Confirmed facts in the format understood by Eml's existing app.py."""
+        """Confirmed facts in the format understood by Eml's existing legacy/app.py."""
         result = []
         for client in self.list_clients():
             values: dict[str, list] = {}

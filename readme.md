@@ -7,8 +7,11 @@ Run `Setup.cmd` once, then `Try-Demo.cmd` for synthetic data or
 Turn selected client correspondence into a detailed, evidence-backed work-record
 draft for professional review.
 
-**Local handoff:** run `Setup.cmd` once and `Launch.cmd` when needed on Windows
-(macOS: `Setup.command` / `Launch.command`). The main workspace now defaults to
+**Start here:** double-click **Launch.cmd** on Windows or **Launch.command** on Mac.
+Run the matching **Setup** file once before first use. In a clean Windows handoff
+package, the outer launcher is **Start.cmd**. [Entrypoints and folder layout](docs/project_layout.md).
+
+**Local handoff:** the main workspace defaults to
 reviewed cloud packages: copy to an approved LLM or use the optional Gemini API;
 Ollama is not required. See the [installation guide](docs/local_install.md) and
 [17 November handoff checks and hosting assessment](docs/handoff_2026-11-17.md).
